@@ -30,6 +30,7 @@ export const create = mutation({
     appointment_time: v.string(),
     dental_problem: v.string(),
     notes: v.optional(v.string()),
+    is_offline: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     // Check slot availability
@@ -55,6 +56,7 @@ export const create = mutation({
       dental_problem: args.dental_problem,
       notes: args.notes || "",
       status: "SCHEDULED",
+      is_offline: args.is_offline || false,
       created_at: now,
       updated_at: now,
     });
@@ -145,6 +147,7 @@ export const update = mutation({
     dental_problem: v.optional(v.string()),
     status: v.optional(v.union(v.literal("SCHEDULED"), v.literal("COMPLETED"), v.literal("CANCELLED"))),
     notes: v.optional(v.string()),
+    is_offline: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id);
@@ -188,6 +191,7 @@ export const update = mutation({
     if (args.dental_problem !== undefined) updateData.dental_problem = args.dental_problem;
     if (args.status !== undefined) updateData.status = args.status;
     if (args.notes !== undefined) updateData.notes = args.notes;
+    if (args.is_offline !== undefined) updateData.is_offline = args.is_offline;
 
     await ctx.db.patch(args.id, updateData);
     return args.id;

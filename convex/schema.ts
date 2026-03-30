@@ -174,6 +174,7 @@ export default defineSchema({
     dental_problem: v.string(),
     status: v.optional(v.union(v.literal("SCHEDULED"), v.literal("COMPLETED"), v.literal("CANCELLED"))),
     notes: v.optional(v.string()),
+    is_offline: v.optional(v.boolean()),
     created_at: v.number(),
     updated_at: v.number(),
   })

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Calendar, Plus, Edit2, Trash2, Eye } from "lucide-react";
 import {
@@ -26,6 +27,11 @@ import {
 } from "@/services/appointments";
 
 export default function AppointmentsPage() {
+  const allTimeSlots = [
+    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30",
+    "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00",
+  ];
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -37,6 +43,7 @@ export default function AppointmentsPage() {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
+  const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set());
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -46,6 +53,7 @@ export default function AppointmentsPage() {
     dental_problem: "",
     notes: "",
     status: "SCHEDULED" as "SCHEDULED" | "COMPLETED" | "CANCELLED",
+    is_offline: false,
   });
 
   // Fetch appointments on mount
@@ -77,6 +85,14 @@ export default function AppointmentsPage() {
     try {
       const slots = await getAvailableSlots(date);
       setAvailableSlots(slots);
+      // Get all appointments for this date to track booked slots
+      const allAppointments = await getAllAppointments();
+      const bookedForDate = new Set(
+        allAppointments
+          .filter((apt) => apt.appointment_date === date && apt.status !== "CANCELLED")
+          .map((apt) => apt.appointment_time)
+      );
+      setBookedSlots(bookedForDate);
     } catch (error) {
       console.error("Error loading available slots:", error);
     }
@@ -94,6 +110,7 @@ export default function AppointmentsPage() {
         dental_problem: appointment.dental_problem,
         notes: appointment.notes || "",
         status: (appointment.status || "SCHEDULED") as "SCHEDULED" | "COMPLETED" | "CANCELLED",
+        is_offline: (appointment as any).is_offline || false,
       });
     } else {
       setIsEditMode(false);
@@ -106,6 +123,7 @@ export default function AppointmentsPage() {
         dental_problem: "",
         notes: "",
         status: "SCHEDULED" as "SCHEDULED" | "COMPLETED" | "CANCELLED",
+        is_offline: false,
       });
     }
     setIsDialogOpen(true);
@@ -130,7 +148,8 @@ export default function AppointmentsPage() {
           dental_problem: formData.dental_problem,
           notes: formData.notes,
           status: formData.status,
-        });
+          is_offline: formData.is_offline,
+        } as any);
         alert("Appointment updated successfully");
       } else {
         await createAppointment({
@@ -140,6 +159,7 @@ export default function AppointmentsPage() {
           appointment_time: formData.appointment_time,
           dental_problem: formData.dental_problem,
           notes: formData.notes,
+          is_offline: formData.is_offline,
         });
         alert("Appointment created successfully");
       }
@@ -283,9 +303,16 @@ export default function AppointmentsPage() {
                         </div>
                         <div>
                           <p className="text-gray-600 text-sm">Status</p>
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(appointment.status)}`}>
-                            {appointment.status || "SCHEDULED"}
-                          </span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(appointment.status)}`}>
+                              {appointment.status || "SCHEDULED"}
+                            </span>
+                            {(appointment as any).is_offline && (
+                              <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                Walk-in
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex gap-2 justify-end">
                           <Button
@@ -327,6 +354,11 @@ export default function AppointmentsPage() {
                 <DialogTitle>
                   {isEditMode ? "Edit Appointment" : "New Appointment"}
                 </DialogTitle>
+                <DialogDescription>
+                  {isEditMode
+                    ? "Update the appointment details and save your changes."
+                    : "Fill in patient details to create a new appointment."}
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -380,23 +412,47 @@ export default function AppointmentsPage() {
                   <label className="text-gray-700 text-sm font-medium">
                     Time *
                   </label>
-                  <Select
-                    value={formData.appointment_time}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, appointment_time: value })
-                    }
-                  >
-                    <SelectTrigger className="bg-white border-gray-300 text-gray-900">
-                      <SelectValue placeholder="Select time slot" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-gray-300">
-                      {availableSlots.map((slot) => (
-                        <SelectItem key={slot} value={slot} className="text-gray-900 hover:bg-blue-50">
-                          {slot}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {formData.is_offline ? (
+                    <>
+                      <Input
+                        type="time"
+                        value={formData.appointment_time}
+                        onChange={(e) =>
+                          setFormData({ ...formData, appointment_time: e.target.value })
+                        }
+                        className="mt-1 bg-white border-gray-300 text-gray-900"
+                      />
+                      <p className="text-xs text-amber-700 mt-1">
+                        Offline booking: you can enter any custom time (example: 09:45).
+                      </p>
+                    </>
+                  ) : (
+                    <Select
+                      value={formData.appointment_time}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, appointment_time: value })
+                      }
+                    >
+                      <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                        <SelectValue placeholder="Select time slot" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-gray-300">
+                        {allTimeSlots.map((slot) => {
+                          const isBooked = bookedSlots.has(slot);
+                          return (
+                            <SelectItem
+                              key={slot}
+                              value={slot}
+                              className={`${isBooked ? "text-red-600 opacity-60" : "text-gray-900"} hover:bg-blue-50`}
+                              disabled={isBooked}
+                            >
+                              {slot} {isBooked ? "(Booked)" : "(Available)"}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 <div>
@@ -426,6 +482,30 @@ export default function AppointmentsPage() {
                     className="mt-1 bg-white border-gray-300 text-gray-900 placeholder-gray-500"
                     rows={3}
                   />
+                </div>
+
+                <div className="flex items-center space-x-2 py-2">
+                  <Checkbox
+                    id="offline"
+                    checked={formData.is_offline}
+                    onCheckedChange={(checked) => {
+                      const isOffline = checked === true;
+                      setFormData((prev) => {
+                        const next = { ...prev, is_offline: isOffline };
+                        if (!isOffline && !allTimeSlots.includes(prev.appointment_time)) {
+                          next.appointment_time = "";
+                        }
+                        return next;
+                      });
+                    }}
+                    className="border-gray-300"
+                  />
+                  <label
+                    htmlFor="offline"
+                    className="text-sm font-medium text-gray-700 cursor-pointer"
+                  >
+                    Walk-in / Offline Appointment
+                  </label>
                 </div>
 
                 {isEditMode && (

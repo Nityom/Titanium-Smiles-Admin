@@ -17,6 +17,7 @@ export interface Appointment {
   dental_problem: string;
   status?: "SCHEDULED" | "COMPLETED" | "CANCELLED";
   notes?: string;
+  is_offline?: boolean;
   created_at: number;
   updated_at: number;
 }
@@ -28,6 +29,7 @@ export const createAppointment = async (data: {
   appointment_time: string;
   dental_problem: string;
   notes?: string;
+  is_offline?: boolean;
 }) => {
   const appointmentId = await convex.mutation(api.appointments.create, {
     full_name: data.full_name,
@@ -36,6 +38,7 @@ export const createAppointment = async (data: {
     appointment_time: data.appointment_time,
     dental_problem: data.dental_problem,
     notes: data.notes || "",
+    is_offline: data.is_offline || false,
   });
   return appointmentId;
 };
