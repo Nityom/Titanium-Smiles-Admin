@@ -78,7 +78,6 @@ const ALL_TIME_SLOTS = [
   "19:30",
 ];
 
-const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
 const REMINDER_OPTIONS = [0, 15, 30, 60, 120];
 const DOCTOR_OPTIONS = [
   "Dr. Sindhuja Pandey",
@@ -90,19 +89,14 @@ const DOCTOR_OPTIONS = [
 
 const DOCTOR_COLOR_CLASSES = [
   {
-    card: "bg-emerald-100 border-emerald-300 text-emerald-900",
-    dot: "bg-emerald-600",
-    line: "border-emerald-400",
-  },
-  {
     card: "bg-blue-100 border-blue-300 text-blue-900",
     dot: "bg-blue-600",
     line: "border-blue-400",
   },
   {
-    card: "bg-amber-100 border-amber-300 text-amber-900",
-    dot: "bg-amber-600",
-    line: "border-amber-400",
+    card: "bg-sky-100 border-sky-300 text-sky-900",
+    dot: "bg-sky-600",
+    line: "border-sky-400",
   },
   {
     card: "bg-rose-100 border-rose-300 text-rose-900",
@@ -114,12 +108,18 @@ const DOCTOR_COLOR_CLASSES = [
     dot: "bg-violet-600",
     line: "border-violet-400",
   },
+  {
+    card: "bg-slate-100 border-slate-300 text-slate-900",
+    dot: "bg-slate-600",
+    line: "border-slate-400",
+  },
 ];
 
 const CALENDAR_START_MINUTES = 9 * 60;
 const CALENDAR_END_MINUTES = 20 * 60;
-const PIXELS_PER_MINUTE = 1.8;
-const APPOINTMENT_VERTICAL_GAP = 8;
+const PIXELS_PER_MINUTE = 2.4;
+const APPOINTMENT_VERTICAL_GAP = 12;
+const FIXED_APPOINTMENT_DURATION_MINUTES = 30;
 
 const toDateKey = (date: Date) => {
   const year = date.getFullYear();
@@ -189,10 +189,10 @@ const calendarRangeLabel = (date: Date, viewMode: ViewMode) => {
 const doctorPalette = (doctorName: string) => {
   const normalized = doctorName.trim().toLowerCase();
 
-  if (normalized.includes("sindhuja")) return DOCTOR_COLOR_CLASSES[3];
-  if (normalized.includes("tarun")) return DOCTOR_COLOR_CLASSES[1];
+  if (normalized.includes("sindhuja")) return DOCTOR_COLOR_CLASSES[2];
+  if (normalized.includes("tarun")) return DOCTOR_COLOR_CLASSES[0];
   if (normalized.includes("aman")) return DOCTOR_COLOR_CLASSES[2];
-  if (normalized.includes("neha")) return DOCTOR_COLOR_CLASSES[0];
+  if (normalized.includes("neha")) return DOCTOR_COLOR_CLASSES[3];
 
   return DOCTOR_COLOR_CLASSES[4];
 };
@@ -219,7 +219,7 @@ const buildLaneLayout = (appointments: Appointment[]): LaneLayoutItem[] => {
   const sorted = [...appointments]
     .map((appointment) => {
       const start = toMinutes(appointment.appointment_time);
-      const duration = Math.max(appointment.duration_minutes || 30, 15);
+      const duration = FIXED_APPOINTMENT_DURATION_MINUTES;
       return {
         appointment,
         start,
@@ -300,7 +300,6 @@ export default function AppointmentsPage() {
     appointment_date: toDateKey(new Date()),
     appointment_time: "",
     doctor_name: DOCTOR_OPTIONS[0],
-    duration_minutes: 30,
     dental_problem: "",
     notes: "",
     status: "SCHEDULED" as "SCHEDULED" | "COMPLETED" | "CANCELLED",
@@ -373,7 +372,6 @@ export default function AppointmentsPage() {
         appointment_date: appointment.appointment_date,
         appointment_time: appointment.appointment_time,
         doctor_name: resolveDoctorName(appointment),
-        duration_minutes: appointment.duration_minutes || 30,
         dental_problem: appointment.dental_problem,
         notes: appointment.notes || "",
         status: (appointment.status || "SCHEDULED") as
@@ -391,7 +389,6 @@ export default function AppointmentsPage() {
         appointment_date: toDateKey(selectedDate),
         appointment_time: "",
         doctor_name: DOCTOR_OPTIONS[0],
-        duration_minutes: 30,
         dental_problem: "",
         notes: "",
         status: "SCHEDULED",
@@ -423,7 +420,6 @@ export default function AppointmentsPage() {
           appointment_date: formData.appointment_date,
           appointment_time: formData.appointment_time,
           doctor_name: formData.doctor_name,
-          duration_minutes: formData.duration_minutes,
           dental_problem: formData.dental_problem,
           notes: formData.notes,
           status: formData.status,
@@ -436,7 +432,6 @@ export default function AppointmentsPage() {
           appointment_date: formData.appointment_date,
           appointment_time: formData.appointment_time,
           doctor_name: formData.doctor_name,
-          duration_minutes: formData.duration_minutes,
           dental_problem: formData.dental_problem,
           notes: formData.notes,
           is_offline: formData.is_offline,
@@ -583,7 +578,7 @@ export default function AppointmentsPage() {
     );
 
     return (
-      <div className="overflow-auto rounded-xl border border-gray-200">
+      <div className="calendar-scroll overflow-auto rounded-xl border border-gray-200 bg-white">
         <div
           className="min-w-[920px]"
           style={{
@@ -632,7 +627,7 @@ export default function AppointmentsPage() {
                     className="absolute left-0 right-0 border-t border-gray-100"
                     style={{ top: `${top}px` }}
                   >
-                    <span className="-mt-2 block pr-2 text-right text-[11px] text-gray-500">
+                    <span className="-mt-2 block pr-2 text-right text-[11px] text-[#70788a]">
                       {formatMinutesAsTime(minutes)}
                     </span>
                   </div>
@@ -670,11 +665,11 @@ export default function AppointmentsPage() {
               const appointment = entry.appointment;
               const doctor = resolveDoctorName(appointment);
               const startMinutes = entry.start;
-              const durationMinutes = Math.max(appointment.duration_minutes || 30, 15);
+              const durationMinutes = FIXED_APPOINTMENT_DURATION_MINUTES;
               const blockTop =
                 (startMinutes - CALENDAR_START_MINUTES) * PIXELS_PER_MINUTE;
               const blockHeight =
-                Math.max(durationMinutes * PIXELS_PER_MINUTE - APPOINTMENT_VERTICAL_GAP, 26);
+                Math.max(durationMinutes * PIXELS_PER_MINUTE - APPOINTMENT_VERTICAL_GAP, 34);
               const palette = doctorPalette(doctor);
               const leftPct = (entry.column / entry.columnsInGroup) * 100;
               const widthPct = 100 / entry.columnsInGroup;
@@ -685,8 +680,8 @@ export default function AppointmentsPage() {
                   type="button"
                   className={`absolute overflow-hidden rounded-md border-l-4 p-2.5 text-left shadow-sm transition hover:shadow-md ${palette.card} ${palette.line}`}
                   style={{
-                    left: `calc(${leftPct}% + 6px)`,
-                    width: `calc(${widthPct}% - 12px)`,
+                    left: `calc(${leftPct}% + 10px)`,
+                    width: `calc(${widthPct}% - 20px)`,
                     top: `${Math.max(blockTop + APPOINTMENT_VERTICAL_GAP / 2, 0)}px`,
                     height: `${blockHeight}px`,
                   }}
@@ -699,7 +694,7 @@ export default function AppointmentsPage() {
                     </div>
                     <div className="min-w-0 text-right">
                       <p className="shrink-0 text-[11px] font-medium opacity-90">
-                        {appointment.appointment_time} • {durationMinutes}m
+                        {appointment.appointment_time}
                       </p>
                       <p className="truncate text-[11px] opacity-80">
                         {appointment.dental_problem}
@@ -755,11 +750,10 @@ export default function AppointmentsPage() {
                   <p className="text-xs text-gray-400">No appointments</p>
                 )}
 
-                {dayAppointments.slice(0, 6).map((appointment) => {
+                {dayAppointments.map((appointment) => {
                   const palette = doctorPalette(
                     resolveDoctorName(appointment),
                   );
-                  const duration = appointment.duration_minutes || 30;
                   return (
                     <button
                       key={appointment._id}
@@ -772,9 +766,7 @@ export default function AppointmentsPage() {
                     >
                       <div className="flex items-center justify-between gap-2">
                         <p className="truncate font-semibold">{appointment.full_name}</p>
-                        <p className="shrink-0 opacity-90">
-                          {appointment.appointment_time} • {duration}m
-                        </p>
+                        <p className="shrink-0 opacity-90">{appointment.appointment_time}</p>
                       </div>
                       <p className="truncate opacity-80">
                         {resolveDoctorName(appointment)}
@@ -782,12 +774,6 @@ export default function AppointmentsPage() {
                     </button>
                   );
                 })}
-
-                {dayAppointments.length > 6 && (
-                  <p className="text-xs font-medium text-gray-500">
-                    +{dayAppointments.length - 6} more
-                  </p>
-                )}
               </div>
             </Card>
           );
@@ -847,7 +833,7 @@ export default function AppointmentsPage() {
                   {day.getDate()}
                 </p>
                 <div className="mt-2 space-y-1">
-                  {dayAppointments.slice(0, 3).map((appointment) => {
+                  {dayAppointments.map((appointment) => {
                     const palette = doctorPalette(
                       resolveDoctorName(appointment),
                     );
@@ -860,11 +846,6 @@ export default function AppointmentsPage() {
                       </div>
                     );
                   })}
-                  {dayAppointments.length > 3 && (
-                    <p className="text-[10px] font-medium text-gray-500">
-                      +{dayAppointments.length - 3} more
-                    </p>
-                  )}
                 </div>
               </button>
             );
@@ -979,11 +960,10 @@ export default function AppointmentsPage() {
         ) : (
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {reminderItems.map((item) => {
-              const palette = DOCTOR_COLOR_CLASSES[2];
               return (
                 <div
                   key={item._id}
-                  className={`rounded-md border p-3 text-xs ${palette.card}`}
+                  className="rounded-md border border-amber-300 bg-amber-100 p-3 text-xs text-amber-900"
                 >
                   <p className="font-semibold">{item.title}</p>
                   {item.notes && <p className="mt-1 opacity-80">{item.notes}</p>}
@@ -1045,14 +1025,11 @@ export default function AppointmentsPage() {
 
             {selectedDayAppointments.map((appointment) => {
               const palette = doctorPalette(resolveDoctorName(appointment));
-              const duration = appointment.duration_minutes || 30;
               return (
                 <div key={appointment._id} className={`w-full rounded-md border p-2 text-left text-xs ${palette.card}`}>
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate font-semibold">{appointment.full_name}</p>
-                    <p className="shrink-0 opacity-90">
-                      {appointment.appointment_time} • {duration}m
-                    </p>
+                    <p className="shrink-0 opacity-90">{appointment.appointment_time}</p>
                   </div>
                   <p className="opacity-80">{resolveDoctorName(appointment)}</p>
                   <div className="mt-2 flex gap-2">
@@ -1084,6 +1061,19 @@ export default function AppointmentsPage() {
           </div>
         </Card>
       </div>
+
+      <style jsx global>{`
+        .calendar-scroll {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+
+        .calendar-scroll::-webkit-scrollbar {
+          width: 0 !important;
+          height: 0 !important;
+          display: none !important;
+        }
+      `}</style>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-xl border-gray-300 bg-white text-gray-900">
@@ -1168,86 +1158,56 @@ export default function AppointmentsPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Time *</label>
-                {formData.is_offline ? (
-                  <>
-                    <Input
-                      type="time"
-                      value={formData.appointment_time}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          appointment_time: e.target.value,
-                        }))
-                      }
-                      className="mt-1 border-gray-300"
-                    />
-                    <p className="mt-1 text-xs text-amber-700">
-                      Walk-in mode allows custom time (example: 09:45).
-                    </p>
-                  </>
-                ) : (
-                  <Select
+            <div>
+              <label className="text-sm font-medium text-gray-700">Time *</label>
+              {formData.is_offline ? (
+                <>
+                  <Input
+                    type="time"
                     value={formData.appointment_time}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, appointment_time: value }))
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        appointment_time: e.target.value,
+                      }))
                     }
-                  >
-                    <SelectTrigger className="mt-1 border-gray-300">
-                      <SelectValue placeholder="Select time slot" />
-                    </SelectTrigger>
-                    <SelectContent className="border-gray-300 bg-white">
-                      {(availableSlots.length > 0 ? availableSlots : ALL_TIME_SLOTS).map(
-                        (slot) => {
-                          const isBooked = bookedSlots.has(slot);
-                          return (
-                            <SelectItem
-                              key={slot}
-                              value={slot}
-                              disabled={isBooked}
-                              className={
-                                isBooked ? "text-red-600 opacity-60" : "text-gray-900"
-                              }
-                            >
-                              {slot} {isBooked ? "(Booked)" : "(Available)"}
-                            </SelectItem>
-                          );
-                        },
-                      )}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700">Duration *</label>
+                    className="mt-1 border-gray-300"
+                  />
+                  <p className="mt-1 text-xs text-amber-700">
+                    Walk-in mode allows custom time (example: 09:45).
+                  </p>
+                </>
+              ) : (
                 <Select
-                  value={`${formData.duration_minutes}`}
+                  value={formData.appointment_time}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      duration_minutes: Number(value),
-                    }))
+                    setFormData((prev) => ({ ...prev, appointment_time: value }))
                   }
                 >
                   <SelectTrigger className="mt-1 border-gray-300">
-                    <SelectValue />
+                    <SelectValue placeholder="Select time slot" />
                   </SelectTrigger>
                   <SelectContent className="border-gray-300 bg-white">
-                    {DURATION_OPTIONS.map((minutes) => (
-                      <SelectItem
-                        key={minutes}
-                        value={`${minutes}`}
-                        className="text-gray-900"
-                      >
-                        {minutes} minutes
-                      </SelectItem>
-                    ))}
+                    {(availableSlots.length > 0 ? availableSlots : ALL_TIME_SLOTS).map(
+                      (slot) => {
+                        const isBooked = bookedSlots.has(slot);
+                        return (
+                          <SelectItem
+                            key={slot}
+                            value={slot}
+                            disabled={isBooked}
+                            className={
+                              isBooked ? "text-red-600 opacity-60" : "text-gray-900"
+                            }
+                          >
+                            {slot} {isBooked ? "(Booked)" : "(Available)"}
+                          </SelectItem>
+                        );
+                      },
+                    )}
                   </SelectContent>
                 </Select>
-              </div>
+              )}
             </div>
 
             <div>
