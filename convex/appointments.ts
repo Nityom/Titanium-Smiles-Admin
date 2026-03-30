@@ -6,15 +6,19 @@ export const checkSlotAvailability = query({
   args: {
     appointment_date: v.string(),
     appointment_time: v.string(),
+    doctor_name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("appointments")
-      .withIndex("by_date_time", (q) =>
-        q.eq("appointment_date", args.appointment_date)
-          .eq("appointment_time", args.appointment_time)
+      .withIndex("by_date", (q) => q.eq("appointment_date", args.appointment_date))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("appointment_time"), args.appointment_time),
+          q.eq(q.field("doctor_name"), args.doctor_name || "Unassigned"),
+          q.neq(q.field("status"), "CANCELLED")
+        )
       )
-      .filter((q) => q.neq(q.field("status"), "CANCELLED"))
       .first();
 
     return !existing; // Returns true if slot is available
@@ -28,19 +32,26 @@ export const create = mutation({
     phone: v.string(),
     appointment_date: v.string(),
     appointment_time: v.string(),
+    doctor_name: v.optional(v.string()),
+    duration_minutes: v.optional(v.number()),
     dental_problem: v.string(),
     notes: v.optional(v.string()),
+    reminder_note: v.optional(v.string()),
+    reminder_minutes_before: v.optional(v.number()),
     is_offline: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     // Check slot availability
     const existing = await ctx.db
       .query("appointments")
-      .withIndex("by_date_time", (q) =>
-        q.eq("appointment_date", args.appointment_date)
-          .eq("appointment_time", args.appointment_time)
+      .withIndex("by_date", (q) => q.eq("appointment_date", args.appointment_date))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("appointment_time"), args.appointment_time),
+          q.eq(q.field("doctor_name"), args.doctor_name || "Unassigned"),
+          q.neq(q.field("status"), "CANCELLED")
+        )
       )
-      .filter((q) => q.neq(q.field("status"), "CANCELLED"))
       .first();
 
     if (existing) {
@@ -53,8 +64,12 @@ export const create = mutation({
       phone: args.phone,
       appointment_date: args.appointment_date,
       appointment_time: args.appointment_time,
+      doctor_name: args.doctor_name || "Unassigned",
+      duration_minutes: args.duration_minutes || 30,
       dental_problem: args.dental_problem,
       notes: args.notes || "",
+      reminder_note: args.reminder_note || "",
+      reminder_minutes_before: args.reminder_minutes_before ?? 30,
       status: "SCHEDULED",
       is_offline: args.is_offline || false,
       created_at: now,
@@ -144,9 +159,13 @@ export const update = mutation({
     phone: v.optional(v.string()),
     appointment_date: v.optional(v.string()),
     appointment_time: v.optional(v.string()),
+    doctor_name: v.optional(v.string()),
+    duration_minutes: v.optional(v.number()),
     dental_problem: v.optional(v.string()),
     status: v.optional(v.union(v.literal("SCHEDULED"), v.literal("COMPLETED"), v.literal("CANCELLED"))),
     notes: v.optional(v.string()),
+    reminder_note: v.optional(v.string()),
+    reminder_minutes_before: v.optional(v.number()),
     is_offline: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -156,27 +175,31 @@ export const update = mutation({
     }
 
     // If changing time slot, check availability
-    if (args.appointment_date && args.appointment_time) {
-      if (
-        args.appointment_date !== existing.appointment_date ||
-        args.appointment_time !== existing.appointment_time
-      ) {
-        const allAppointments = await ctx.db
-          .query("appointments")
-          .collect();
+    const nextDate = args.appointment_date ?? existing.appointment_date;
+    const nextTime = args.appointment_time ?? existing.appointment_time;
+    const nextDoctor = args.doctor_name ?? existing.doctor_name ?? "Unassigned";
 
-        const conflict = allAppointments.find((apt) =>
-          apt.appointment_date === args.appointment_date &&
-          apt.appointment_time === args.appointment_time &&
-          apt.status !== "CANCELLED" &&
-          apt._id !== args.id
+    if (
+      nextDate !== existing.appointment_date ||
+      nextTime !== existing.appointment_time ||
+      nextDoctor !== (existing.doctor_name || "Unassigned")
+    ) {
+      const allAppointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_date", (q) => q.eq("appointment_date", nextDate))
+        .collect();
+
+      const conflict = allAppointments.find((apt) =>
+        apt.appointment_time === nextTime &&
+        (apt.doctor_name || "Unassigned") === nextDoctor &&
+        apt.status !== "CANCELLED" &&
+        apt._id !== args.id
+      );
+
+      if (conflict) {
+        throw new Error(
+          `Time slot ${nextTime} on ${nextDate} is already booked for ${nextDoctor}`
         );
-
-        if (conflict) {
-          throw new Error(
-            `Time slot ${args.appointment_time} on ${args.appointment_date} is already booked`
-          );
-        }
       }
     }
 
@@ -188,9 +211,13 @@ export const update = mutation({
     if (args.phone !== undefined) updateData.phone = args.phone;
     if (args.appointment_date !== undefined) updateData.appointment_date = args.appointment_date;
     if (args.appointment_time !== undefined) updateData.appointment_time = args.appointment_time;
+    if (args.doctor_name !== undefined) updateData.doctor_name = args.doctor_name;
+    if (args.duration_minutes !== undefined) updateData.duration_minutes = args.duration_minutes;
     if (args.dental_problem !== undefined) updateData.dental_problem = args.dental_problem;
     if (args.status !== undefined) updateData.status = args.status;
     if (args.notes !== undefined) updateData.notes = args.notes;
+    if (args.reminder_note !== undefined) updateData.reminder_note = args.reminder_note;
+    if (args.reminder_minutes_before !== undefined) updateData.reminder_minutes_before = args.reminder_minutes_before;
     if (args.is_offline !== undefined) updateData.is_offline = args.is_offline;
 
     await ctx.db.patch(args.id, updateData);
@@ -222,6 +249,7 @@ export const remove = mutation({
 export const getAvailableSlots = query({
   args: {
     appointment_date: v.string(),
+    doctor_name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Define standard time slots (30-minute intervals, 9 AM to 5 PM)
@@ -234,7 +262,12 @@ export const getAvailableSlots = query({
     const bookedAppointments = await ctx.db
       .query("appointments")
       .withIndex("by_date", (q) => q.eq("appointment_date", args.appointment_date))
-      .filter((q) => q.neq(q.field("status"), "CANCELLED"))
+      .filter((q) =>
+        q.and(
+          q.neq(q.field("status"), "CANCELLED"),
+          q.eq(q.field("doctor_name"), args.doctor_name || "Unassigned")
+        )
+      )
       .collect();
 
     const bookedTimes = new Set(bookedAppointments.map((a) => a.appointment_time));
@@ -257,8 +290,12 @@ export const seedTestData = mutation({
         phone: "+91-9876543210",
         appointment_date: today.toISOString().split("T")[0],
         appointment_time: "09:00",
+        doctor_name: "Dr. Tarun Pandey",
+        duration_minutes: 30,
         dental_problem: "Regular Checkup",
         notes: "First time patient",
+        reminder_note: "Confirm consent form",
+        reminder_minutes_before: 30,
         status: "SCHEDULED" as const,
       },
       {
@@ -266,8 +303,12 @@ export const seedTestData = mutation({
         phone: "+91-9876543211",
         appointment_date: today.toISOString().split("T")[0],
         appointment_time: "09:30",
+        doctor_name: "Dr. Sindhuja Pandey",
+        duration_minutes: 45,
         dental_problem: "Cavity Filling",
         notes: "Previous filling replacement",
+        reminder_note: "Prepare filling kit",
+        reminder_minutes_before: 15,
         status: "COMPLETED" as const,
       },
       {
@@ -275,8 +316,12 @@ export const seedTestData = mutation({
         phone: "+91-9876543212",
         appointment_date: today.toISOString().split("T")[0],
         appointment_time: "10:00",
+        doctor_name: "Dr. Tarun Pandey",
+        duration_minutes: 60,
         dental_problem: "Root Canal",
         notes: "Emergency appointment",
+        reminder_note: "Set x-ray station",
+        reminder_minutes_before: 30,
         status: "SCHEDULED" as const,
       },
       {
@@ -284,8 +329,12 @@ export const seedTestData = mutation({
         phone: "+91-9876543213",
         appointment_date: today.toISOString().split("T")[0],
         appointment_time: "14:00",
+        doctor_name: "Dr. Sindhuja Pandey",
+        duration_minutes: 30,
         dental_problem: "Teeth Cleaning",
         notes: "Regular maintenance",
+        reminder_note: "Keep polishing setup ready",
+        reminder_minutes_before: 30,
         status: "SCHEDULED" as const,
       },
       {
@@ -293,8 +342,12 @@ export const seedTestData = mutation({
         phone: "+91-9876543214",
         appointment_date: today.toISOString().split("T")[0],
         appointment_time: "15:00",
+        doctor_name: "Dr. Tarun Pandey",
+        duration_minutes: 30,
         dental_problem: "Braces Adjustment",
         notes: "Monthly checkup",
+        reminder_note: "Sterilize braces tools",
+        reminder_minutes_before: 15,
         status: "SCHEDULED" as const,
       },
       
@@ -304,8 +357,12 @@ export const seedTestData = mutation({
         phone: "+91-9876543215",
         appointment_date: new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0],
         appointment_time: "10:30",
+        doctor_name: "Dr. Sindhuja Pandey",
+        duration_minutes: 60,
         dental_problem: "Wisdom Tooth Extraction",
         notes: "Pre-extraction consultation done",
+        reminder_note: "Arrange extraction tray",
+        reminder_minutes_before: 60,
         status: "SCHEDULED" as const,
       },
       {
@@ -313,8 +370,12 @@ export const seedTestData = mutation({
         phone: "+91-9876543216",
         appointment_date: new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0],
         appointment_time: "11:00",
+        doctor_name: "Dr. Tarun Pandey",
+        duration_minutes: 45,
         dental_problem: "Gum Disease Treatment",
         notes: "Second session",
+        reminder_note: "Review prior periodontal chart",
+        reminder_minutes_before: 30,
         status: "SCHEDULED" as const,
       },
       {

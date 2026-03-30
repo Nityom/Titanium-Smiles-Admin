@@ -146,13 +146,13 @@ export function AppSidebar({ children }: { children?: React.ReactNode }): React.
   }, [router]);
 
   const items: MenuItem[] = [
+    { id: "appointments", title: "Appointments", url: "/admin/appointments", icon: Calendar },
     { id: "patient-management", title: "Patient Management", url: "/admin/patients", icon: Inbox },
     { id: "medicine-management", title: "Medicine Management", url: "/admin/medicines", icon: Pill },
     { id: "Inventory-management", title: "Inventory Management", url: "/admin/inventory", icon: Wrench },
     { id: "consumable-settings", title: "Consumable Settings", url: "/admin/consumable-settings", icon: Package },
     { id: "sales-report", title: "Sales Report", url: "/admin/medicines/sales", icon: TrendingUp },
     { id: "installments", title: "Payment Installments", url: "/admin/installments", icon: CreditCard },
-    { id: "appointments", title: "Appointments", url: "/admin/appointments", icon: Calendar },
     { id: "generate-prescription", title: "Generate Prescription", url: "/admin/prescription", icon: FileText },
   ];
 

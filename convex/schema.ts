@@ -171,14 +171,28 @@ export default defineSchema({
     phone: v.string(),
     appointment_date: v.string(), // YYYY-MM-DD
     appointment_time: v.string(), // HH:mm
+    doctor_name: v.optional(v.string()),
+    duration_minutes: v.optional(v.number()),
     dental_problem: v.string(),
     status: v.optional(v.union(v.literal("SCHEDULED"), v.literal("COMPLETED"), v.literal("CANCELLED"))),
     notes: v.optional(v.string()),
+    reminder_note: v.optional(v.string()),
+    reminder_minutes_before: v.optional(v.number()),
     is_offline: v.optional(v.boolean()),
     created_at: v.number(),
     updated_at: v.number(),
   })
     .index("by_date", ["appointment_date"])
     .index("by_date_time", ["appointment_date", "appointment_time"])
+    .index("by_date_doctor_time", ["appointment_date", "doctor_name", "appointment_time"])
     .index("by_phone", ["phone"]),
+
+  reminders: defineTable({
+    reminder_date: v.string(), // YYYY-MM-DD
+    title: v.string(),
+    notes: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_date", ["reminder_date"]),
 });

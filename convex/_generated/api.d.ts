@@ -18,6 +18,7 @@ import type * as medicines from "../medicines.js";
 import type * as patients from "../patients.js";
 import type * as payment_transactions from "../payment_transactions.js";
 import type * as prescriptions from "../prescriptions.js";
+import type * as reminders from "../reminders.js";
 
 import type {
   ApiFromModules,
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   patients: typeof patients;
   payment_transactions: typeof payment_transactions;
   prescriptions: typeof prescriptions;
+  reminders: typeof reminders;
 }>;
 
 /**
