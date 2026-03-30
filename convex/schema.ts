@@ -165,4 +165,19 @@ export default defineSchema({
     counter_id: v.number(), // Use 1 for the singleton
     current_number: v.number(),
   }).index("by_counter_id", ["counter_id"]),
+
+  appointments: defineTable({
+    full_name: v.string(),
+    phone: v.string(),
+    appointment_date: v.string(), // YYYY-MM-DD
+    appointment_time: v.string(), // HH:mm
+    dental_problem: v.string(),
+    status: v.optional(v.union(v.literal("SCHEDULED"), v.literal("COMPLETED"), v.literal("CANCELLED"))),
+    notes: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_date", ["appointment_date"])
+    .index("by_date_time", ["appointment_date", "appointment_time"])
+    .index("by_phone", ["phone"]),
 });
