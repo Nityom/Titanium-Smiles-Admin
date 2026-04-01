@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,9 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  Pencil,
   Plus,
+  Trash2,
 } from "lucide-react";
 import {
   Appointment,
@@ -41,7 +44,6 @@ import {
   deleteAppointment,
   getAllAppointments,
   getAvailableSlots,
-  seedTestData,
   updateAppointment,
 } from "@/services/appointments";
 import {
@@ -50,6 +52,7 @@ import {
   deleteReminder,
   getRemindersByDate,
 } from "@/services/reminders";
+import { getPatientByPhoneNumber } from "@/services/patients";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -78,7 +81,6 @@ const ALL_TIME_SLOTS = [
   "19:30",
 ];
 
-const REMINDER_OPTIONS = [0, 15, 30, 60, 120];
 const DOCTOR_OPTIONS = [
   "Dr. Sindhuja Pandey",
   "Dr. Tarun Pandey",
@@ -117,8 +119,8 @@ const DOCTOR_COLOR_CLASSES = [
 
 const CALENDAR_START_MINUTES = 9 * 60;
 const CALENDAR_END_MINUTES = 20 * 60;
-const PIXELS_PER_MINUTE = 2.4;
-const APPOINTMENT_VERTICAL_GAP = 12;
+const PIXELS_PER_MINUTE = 3;
+const APPOINTMENT_VERTICAL_GAP = 14;
 const FIXED_APPOINTMENT_DURATION_MINUTES = 30;
 
 const toDateKey = (date: Date) => {
@@ -277,6 +279,7 @@ const buildLaneLayout = (appointments: Appointment[]): LaneLayoutItem[] => {
 };
 
 export default function AppointmentsPage() {
+  const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -459,18 +462,6 @@ export default function AppointmentsPage() {
     }
   };
 
-  const handleSeedTestData = async () => {
-    try {
-      setLoading(true);
-      await seedTestData();
-      await loadAppointments();
-    } catch (error: unknown) {
-      console.error("Failed to seed test data", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleOpenReminderDialog = (appointment?: Appointment) => {
     setReminderFormData({
       reminder_date: selectedDateKey,
@@ -567,6 +558,32 @@ export default function AppointmentsPage() {
     const monthDate = new Date(selectedDate);
     monthDate.setMonth(monthDate.getMonth() + delta);
     setSelectedDate(monthDate);
+  };
+
+  const openPrescriptionForAppointment = async (appointment: Appointment) => {
+    const params = new URLSearchParams();
+    params.set("patientName", appointment.full_name || "");
+    params.set("phone", appointment.phone || "");
+    params.set("date", appointment.appointment_date || toDateKey(new Date()));
+    params.set("chiefComplaint", appointment.dental_problem || "");
+
+    try {
+      if (appointment.phone) {
+        const patient = await getPatientByPhoneNumber(appointment.phone);
+        if (patient) {
+          if (patient.age !== undefined && patient.age !== null) {
+            params.set("age", String(patient.age));
+          }
+          if (patient.sex) {
+            params.set("sex", patient.sex);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to prefill patient details for prescription", error);
+    }
+
+    router.push(`/admin/prescription?${params.toString()}`);
   };
 
   const renderDayView = () => {
@@ -669,7 +686,7 @@ export default function AppointmentsPage() {
               const blockTop =
                 (startMinutes - CALENDAR_START_MINUTES) * PIXELS_PER_MINUTE;
               const blockHeight =
-                Math.max(durationMinutes * PIXELS_PER_MINUTE - APPOINTMENT_VERTICAL_GAP, 34);
+                Math.max(durationMinutes * PIXELS_PER_MINUTE - APPOINTMENT_VERTICAL_GAP, 72);
               const palette = doctorPalette(doctor);
               const leftPct = (entry.column / entry.columnsInGroup) * 100;
               const widthPct = 100 / entry.columnsInGroup;
@@ -685,7 +702,7 @@ export default function AppointmentsPage() {
                     top: `${Math.max(blockTop + APPOINTMENT_VERTICAL_GAP / 2, 0)}px`,
                     height: `${blockHeight}px`,
                   }}
-                  onClick={() => handleOpenDialog(appointment)}
+                  onClick={() => openPrescriptionForAppointment(appointment)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -700,6 +717,27 @@ export default function AppointmentsPage() {
                         {appointment.dental_problem}
                       </p>
                     </div>
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="inline-flex items-center gap-1 rounded border border-gray-300 bg-white/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-700 hover:bg-white"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleOpenDialog(appointment);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          handleOpenDialog(appointment);
+                        }
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Edit
+                    </span>
                   </div>
                 </button>
               );
@@ -758,10 +796,7 @@ export default function AppointmentsPage() {
                     <button
                       key={appointment._id}
                       type="button"
-                      onClick={() => {
-                        setSelectedDate(parseDateKey(appointment.appointment_date));
-                        setViewMode("day");
-                      }}
+                      onClick={() => openPrescriptionForAppointment(appointment)}
                       className={`w-full rounded-md border p-2 text-left text-xs ${palette.card}`}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -771,6 +806,27 @@ export default function AppointmentsPage() {
                       <p className="truncate opacity-80">
                         {resolveDoctorName(appointment)}
                       </p>
+                      <div className="mt-2 flex justify-end">
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="inline-flex items-center gap-1 rounded border border-gray-300 bg-white/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-700 hover:bg-white"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleOpenDialog(appointment);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              handleOpenDialog(appointment);
+                            }
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Edit
+                        </span>
+                      </div>
                     </button>
                   );
                 })}
@@ -808,9 +864,8 @@ export default function AppointmentsPage() {
               .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 
             return (
-              <button
+              <div
                 key={key}
-                type="button"
                 className={`min-h-[130px] border-b border-r border-gray-200 p-2 text-left align-top transition hover:bg-gray-50 ${
                   day.getMonth() !== selectedDate.getMonth()
                     ? "bg-gray-50/70 text-gray-400"
@@ -838,16 +893,32 @@ export default function AppointmentsPage() {
                       resolveDoctorName(appointment),
                     );
                     return (
-                      <div
+                      <button
                         key={appointment._id}
-                        className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${palette.card}`}
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openPrescriptionForAppointment(appointment);
+                        }}
+                        className={`flex w-full items-center justify-between gap-1 truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${palette.card}`}
                       >
-                        {appointment.appointment_time} {appointment.full_name}
-                      </div>
+                        <span className="truncate">
+                          {appointment.appointment_time} {appointment.full_name}
+                        </span>
+                        <span
+                          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gray-300 bg-white/80 text-gray-700"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleOpenDialog(appointment);
+                          }}
+                        >
+                          <Pencil className="h-2.5 w-2.5" />
+                        </span>
+                      </button>
                     );
                   })}
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -871,13 +942,6 @@ export default function AppointmentsPage() {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Button
-            onClick={handleSeedTestData}
-            variant="outline"
-            className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          >
-            Seed Test Data
-          </Button>
           <Button
             onClick={() => handleOpenDialog()}
             className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700"
@@ -949,11 +1013,22 @@ export default function AppointmentsPage() {
       </Card>
 
       <Card className="border-gray-200 bg-white p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <Bell className="h-4 w-4 text-amber-600" />
-          <h2 className="text-sm font-semibold text-gray-900">
-            Day-wise Reminders ({dayFormatter.format(selectedDate)})
-          </h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-amber-600" />
+            <h2 className="text-sm font-semibold text-gray-900">
+              Day-wise Reminders ({dayFormatter.format(selectedDate)})
+            </h2>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => handleOpenReminderDialog()}
+            className="h-8 gap-1.5 bg-amber-600 text-white hover:bg-amber-700"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Reminder
+          </Button>
         </div>
         {reminderItems.length === 0 ? (
           <p className="text-sm text-gray-500">No reminders scheduled for this day.</p>
@@ -969,10 +1044,11 @@ export default function AppointmentsPage() {
                   {item.notes && <p className="mt-1 opacity-80">{item.notes}</p>}
                   <button
                     type="button"
-                    className="mt-2 text-[11px] font-medium text-red-700 underline"
+                    aria-label="Delete reminder"
+                    className="mt-2 inline-flex h-7 w-7 items-center justify-center rounded-md border border-red-300 bg-white/70 text-red-700 hover:bg-red-50"
                     onClick={() => handleDeleteReminder(item._id)}
                   >
-                    Delete
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               );

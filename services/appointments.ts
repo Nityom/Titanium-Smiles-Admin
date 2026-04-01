@@ -214,6 +214,3 @@ export const getAvailableSlots = async (
   }
 };
 
-export const seedTestData = async () => {
-  return await convex.mutation(api.appointments.seedTestData, {});
-};

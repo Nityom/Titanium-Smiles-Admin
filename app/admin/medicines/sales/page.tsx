@@ -56,8 +56,6 @@ interface DailySalesPoint {
   bills: number;
 }
 
-type PatientReportType = 'weekly' | 'monthly' | 'yearly';
-
 interface ConsumableUsageReport {
   usage_date?: string;
   consumable_name?: string;
@@ -89,176 +87,6 @@ interface ConsumableUsageResponse {
   data: ConsumableUsageReport[];
 }
 
-const DUMMY_PATIENT_SALES_BY_PERIOD: Record<PatientReportType, PatientSalesReport[]> = {
-  weekly: [
-    {
-      patient_id: 'W-001',
-      patient_name: 'Rahul Sharma',
-      phone_number: '9876543210',
-      total_bills: 2,
-      total_amount: 9200,
-      paid_amount: 7200,
-      balance_amount: 2000,
-      payment_status: 'PARTIAL',
-    },
-    {
-      patient_id: 'W-002',
-      patient_name: 'Anita Patel',
-      phone_number: '9822201144',
-      total_bills: 1,
-      total_amount: 5400,
-      paid_amount: 5400,
-      balance_amount: 0,
-      payment_status: 'PAID',
-    },
-    {
-      patient_id: 'W-003',
-      patient_name: 'Kiran Desai',
-      phone_number: '9911003322',
-      total_bills: 1,
-      total_amount: 3900,
-      paid_amount: 0,
-      balance_amount: 3900,
-      payment_status: 'PENDING',
-    },
-  ],
-  monthly: [
-    {
-      patient_id: 'M-001',
-      patient_name: 'Rahul Sharma',
-      phone_number: '9876543210',
-      total_bills: 4,
-      total_amount: 18500,
-      paid_amount: 15000,
-      balance_amount: 3500,
-      payment_status: 'PARTIAL',
-    },
-    {
-      patient_id: 'M-002',
-      patient_name: 'Anita Patel',
-      phone_number: '9822201144',
-      total_bills: 3,
-      total_amount: 15600,
-      paid_amount: 15600,
-      balance_amount: 0,
-      payment_status: 'PAID',
-    },
-    {
-      patient_id: 'M-003',
-      patient_name: 'Meera Joshi',
-      phone_number: '9765432189',
-      total_bills: 3,
-      total_amount: 14100,
-      paid_amount: 12000,
-      balance_amount: 2100,
-      payment_status: 'PARTIAL',
-    },
-    {
-      patient_id: 'M-004',
-      patient_name: 'Suresh Nair',
-      phone_number: '9001122334',
-      total_bills: 2,
-      total_amount: 9800,
-      paid_amount: 9800,
-      balance_amount: 0,
-      payment_status: 'PAID',
-    },
-    {
-      patient_id: 'M-005',
-      patient_name: 'Kiran Desai',
-      phone_number: '9911003322',
-      total_bills: 2,
-      total_amount: 7600,
-      paid_amount: 0,
-      balance_amount: 7600,
-      payment_status: 'PENDING',
-    },
-  ],
-  yearly: [
-    {
-      patient_id: 'Y-001',
-      patient_name: 'Rahul Sharma',
-      phone_number: '9876543210',
-      total_bills: 18,
-      total_amount: 124500,
-      paid_amount: 103000,
-      balance_amount: 21500,
-      payment_status: 'PARTIAL',
-    },
-    {
-      patient_id: 'Y-002',
-      patient_name: 'Anita Patel',
-      phone_number: '9822201144',
-      total_bills: 15,
-      total_amount: 118200,
-      paid_amount: 118200,
-      balance_amount: 0,
-      payment_status: 'PAID',
-    },
-    {
-      patient_id: 'Y-003',
-      patient_name: 'Meera Joshi',
-      phone_number: '9765432189',
-      total_bills: 13,
-      total_amount: 102600,
-      paid_amount: 91800,
-      balance_amount: 10800,
-      payment_status: 'PARTIAL',
-    },
-    {
-      patient_id: 'Y-004',
-      patient_name: 'Suresh Nair',
-      phone_number: '9001122334',
-      total_bills: 10,
-      total_amount: 73500,
-      paid_amount: 73500,
-      balance_amount: 0,
-      payment_status: 'PAID',
-    },
-    {
-      patient_id: 'Y-005',
-      patient_name: 'Kiran Desai',
-      phone_number: '9911003322',
-      total_bills: 9,
-      total_amount: 68100,
-      paid_amount: 45200,
-      balance_amount: 22900,
-      payment_status: 'PARTIAL',
-    },
-  ],
-};
-
-const DUMMY_PATIENT_TREND_BY_PERIOD: Record<PatientReportType, DailySalesPoint[]> = {
-  weekly: [
-    { date: 'Mon', sales: 4200, bills: 2 },
-    { date: 'Tue', sales: 7600, bills: 3 },
-    { date: 'Wed', sales: 5100, bills: 2 },
-    { date: 'Thu', sales: 9800, bills: 4 },
-    { date: 'Fri', sales: 6400, bills: 3 },
-    { date: 'Sat', sales: 8300, bills: 3 },
-    { date: 'Sun', sales: 7200, bills: 2 },
-  ],
-  monthly: [
-    { date: 'W1', sales: 34200, bills: 14 },
-    { date: 'W2', sales: 38700, bills: 16 },
-    { date: 'W3', sales: 35900, bills: 15 },
-    { date: 'W4', sales: 41500, bills: 18 },
-  ],
-  yearly: [
-    { date: 'Jan', sales: 89200, bills: 34 },
-    { date: 'Feb', sales: 84500, bills: 31 },
-    { date: 'Mar', sales: 97800, bills: 38 },
-    { date: 'Apr', sales: 93100, bills: 36 },
-    { date: 'May', sales: 100200, bills: 40 },
-    { date: 'Jun', sales: 95600, bills: 37 },
-    { date: 'Jul', sales: 102900, bills: 41 },
-    { date: 'Aug', sales: 98500, bills: 39 },
-    { date: 'Sep', sales: 91000, bills: 35 },
-    { date: 'Oct', sales: 104200, bills: 43 },
-    { date: 'Nov', sales: 108700, bills: 45 },
-    { date: 'Dec', sales: 112400, bills: 47 },
-  ],
-};
 
 export default function SalesReportPage() {
   const [activeTab, setActiveTab] = useState<'medicine' | 'patient' | 'inventory'>('medicine');
@@ -472,9 +300,8 @@ export default function SalesReportPage() {
         payment_status:
           p.balance_amount === 0 ? 'PAID' : p.paid_amount > 0 ? 'PARTIAL' : 'PENDING',
       }));
-      const hasLiveData = result.length > 0;
-      setPatientSalesData(hasLiveData ? result : DUMMY_PATIENT_SALES_BY_PERIOD[patientReportType]);
-      setPatientDailySalesData(dailyResult.length > 0 ? dailyResult : DUMMY_PATIENT_TREND_BY_PERIOD[patientReportType]);
+      setPatientSalesData(result);
+      setPatientDailySalesData(dailyResult);
     } catch (err) {
       console.error('Error fetching patient sales report:', err);
       setPatientError(err instanceof Error ? err.message : 'Failed to fetch patient sales report');
@@ -483,7 +310,7 @@ export default function SalesReportPage() {
     } finally {
       setIsLoadingPatients(false);
     }
-  }, [patientStartDate, patientEndDate, patientReportType]);
+  }, [patientStartDate, patientEndDate]);
 
   useEffect(() => {
     if (patientStartDate && patientEndDate && activeTab === 'patient') {
@@ -1166,7 +993,7 @@ export default function SalesReportPage() {
                     />
                     <Legend />
                     <Line
-                      type="monotone"
+                      type="linear"
                       dataKey="sales"
                       name="Daily Sales"
                       stroke="#2563eb"
