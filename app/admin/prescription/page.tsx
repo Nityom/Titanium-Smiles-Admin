@@ -184,9 +184,11 @@ const PrescriptionPage = () => {
   // States for managing disease and treatment lists
   const [dentalDiseases, setDentalDiseases] = useState<string[]>(DENTAL_DISEASES);
   const [newDiseaseName, setNewDiseaseName] = useState<string>('');
+  const [showAddDiseaseForm, setShowAddDiseaseForm] = useState<boolean>(false);
   const [dentalProcedures, setDentalProcedures] = useState<{ id: number; name: string; price: number }[]>(DEFAULT_DENTAL_PROCEDURES);
   const [newTreatmentName, setNewTreatmentName] = useState<string>('');
   const [newTreatmentPrice, setNewTreatmentPrice] = useState<string>('');
+  const [showAddTreatmentForm, setShowAddTreatmentForm] = useState<boolean>(false);
 
   const [medicineOptions, setMedicineOptions] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -423,6 +425,7 @@ const PrescriptionPage = () => {
     if (newDiseaseName.trim() && !dentalDiseases.includes(newDiseaseName.trim())) {
       setDentalDiseases([...dentalDiseases, newDiseaseName.trim()]);
       setNewDiseaseName('');
+      setShowAddDiseaseForm(false);
     }
   };
 
@@ -439,6 +442,7 @@ const PrescriptionPage = () => {
       setDentalProcedures([...dentalProcedures, newProcedure]);
       setNewTreatmentName('');
       setNewTreatmentPrice('');
+      setShowAddTreatmentForm(false);
     }
   };
 
@@ -1445,45 +1449,71 @@ const PrescriptionPage = () => {
                 </div>
               )}
 
-              {/* Add New Dental Disease */}
-              <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                <h4 className="font-medium text-indigo-800 mb-3">Add New Disease to List:</h4>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newDiseaseName}
-                    onChange={(e) => setNewDiseaseName(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleAddNewDisease();
-                      }
-                    }}
-                    placeholder="Enter disease name"
-                    className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
+              {/* Add New Dental Disease Button & Form */}
+              <div className="mt-6">
+                {!showAddDiseaseForm ? (
                   <button
                     type="button"
-                    onClick={handleAddNewDisease}
-                    disabled={!newDiseaseName.trim()}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    onClick={() => setShowAddDiseaseForm(true)}
+                    className="w-full px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition border border-indigo-300 font-medium"
                   >
-                    + Add
+                    + Add New Disease
                   </button>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {dentalDiseases.map((disease) => (
-                    <div key={disease} className="bg-white px-3 py-1 rounded-full border border-indigo-300 flex items-center gap-2 text-sm">
-                      <span>{disease}</span>
+                ) : (
+                  <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                    <h4 className="font-medium text-indigo-800 mb-3">Add New Disease to List:</h4>
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={newDiseaseName}
+                        onChange={(e) => setNewDiseaseName(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAddNewDisease();
+                          }
+                        }}
+                        placeholder="Enter disease name"
+                        className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        autoFocus
+                      />
                       <button
                         type="button"
-                        onClick={() => handleRemoveDisease(disease)}
-                        className="text-red-600 hover:text-red-800 font-bold"
+                        onClick={handleAddNewDisease}
+                        disabled={!newDiseaseName.trim()}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                       >
-                        ×
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddDiseaseForm(false);
+                          setNewDiseaseName('');
+                        }}
+                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
+                      >
+                        Cancel
                       </button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+                
+                {dentalDiseases.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {dentalDiseases.map((disease) => (
+                      <div key={disease} className="bg-white px-3 py-1 rounded-full border border-indigo-300 flex items-center gap-2 text-sm">
+                        <span>{disease}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDisease(disease)}
+                          className="text-red-600 hover:text-red-800 font-bold"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1716,49 +1746,78 @@ const PrescriptionPage = () => {
                 </div>
               )}
 
-              {/* Add New Treatment to List */}
-              <div className="mt-6 p-4 bg-teal-50 rounded-lg border border-teal-200">
-                <h4 className="font-medium text-teal-800 mb-3">Add New Treatment to List:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
-                  <input
-                    type="text"
-                    value={newTreatmentName}
-                    onChange={(e) => setNewTreatmentName(e.target.value)}
-                    placeholder="Treatment name"
-                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                  />
-                  <input
-                    type="number"
-                    value={newTreatmentPrice}
-                    onChange={(e) => setNewTreatmentPrice(e.target.value)}
-                    placeholder="Price (₹)"
-                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    min="0"
-                    step="0.01"
-                  />
+              {/* Add New Treatment to List Button & Form */}
+              <div className="mt-6">
+                {!showAddTreatmentForm ? (
                   <button
                     type="button"
-                    onClick={handleAddNewTreatment}
-                    disabled={!newTreatmentName.trim() || !newTreatmentPrice.trim()}
-                    className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    onClick={() => setShowAddTreatmentForm(true)}
+                    className="w-full px-4 py-2 bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition border border-teal-300 font-medium"
                   >
-                    + Add
+                    + Add New Treatment
                   </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {dentalProcedures.map((procedure) => (
-                    <div key={procedure.id} className="bg-white px-3 py-1 rounded-full border border-teal-300 flex items-center gap-2 text-sm">
-                      <span>{procedure.name} (₹{procedure.price})</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTreatment(procedure.id)}
-                        className="text-red-600 hover:text-red-800 font-bold"
-                      >
-                        ×
-                      </button>
+                ) : (
+                  <div className="p-4 bg-teal-50 rounded-lg border border-teal-200">
+                    <h4 className="font-medium text-teal-800 mb-3">Add New Treatment to List:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={newTreatmentName}
+                        onChange={(e) => setNewTreatmentName(e.target.value)}
+                        placeholder="Treatment name"
+                        className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        autoFocus
+                      />
+                      <input
+                        type="number"
+                        value={newTreatmentPrice}
+                        onChange={(e) => setNewTreatmentPrice(e.target.value)}
+                        placeholder="Price (₹)"
+                        className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        min="0"
+                        step="0.01"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleAddNewTreatment}
+                          disabled={!newTreatmentName.trim() || !newTreatmentPrice.trim()}
+                          className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddTreatmentForm(false);
+                            setNewTreatmentName('');
+                            setNewTreatmentPrice('');
+                          }}
+                          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {dentalProcedures.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {dentalProcedures.map((procedure) => (
+                      <div key={procedure.id} className="bg-white px-3 py-1 rounded-full border border-teal-300 flex items-center gap-2 text-sm">
+                        <span>{procedure.name} (₹{procedure.price})</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTreatment(procedure.id)}
+                          className="text-red-600 hover:text-red-800 font-bold"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
