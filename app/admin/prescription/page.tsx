@@ -1495,23 +1495,23 @@ const PrescriptionPage = () => {
                         Cancel
                       </button>
                     </div>
-                  </div>
-                )}
-                
-                {dentalDiseases.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {dentalDiseases.map((disease) => (
-                      <div key={disease} className="bg-white px-3 py-1 rounded-full border border-indigo-300 flex items-center gap-2 text-sm">
-                        <span>{disease}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveDisease(disease)}
-                          className="text-red-600 hover:text-red-800 font-bold"
-                        >
-                          ×
-                        </button>
+
+                    {dentalDiseases.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {dentalDiseases.map((disease) => (
+                          <div key={disease} className="bg-white px-3 py-1 rounded-full border border-indigo-300 flex items-center gap-2 text-sm">
+                            <span>{disease}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDisease(disease)}
+                              className="text-red-600 hover:text-red-800 font-bold"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
@@ -1799,23 +1799,23 @@ const PrescriptionPage = () => {
                         </button>
                       </div>
                     </div>
-                  </div>
-                )}
 
-                {dentalProcedures.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {dentalProcedures.map((procedure) => (
-                      <div key={procedure.id} className="bg-white px-3 py-1 rounded-full border border-teal-300 flex items-center gap-2 text-sm">
-                        <span>{procedure.name} (₹{procedure.price})</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTreatment(procedure.id)}
-                          className="text-red-600 hover:text-red-800 font-bold"
-                        >
-                          ×
-                        </button>
+                    {dentalProcedures.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {dentalProcedures.map((procedure) => (
+                          <div key={procedure.id} className="bg-white px-3 py-1 rounded-full border border-teal-300 flex items-center gap-2 text-sm">
+                            <span>{procedure.name} (₹{procedure.price})</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveTreatment(procedure.id)}
+                              className="text-red-600 hover:text-red-800 font-bold"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
