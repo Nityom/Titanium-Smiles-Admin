@@ -184,9 +184,8 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
                 alt="Titanium Smiles Logo" 
                 className="h-16 w-16 mr-3 logo-print"
               />
-              <h1 className="text-4xl font-bold">
-                <span className="ks-grey" style={{color: '#6B7280'}}>Titanium</span>
-                <span className="clinic-blue" style={{color: '#1E63D5'}}> Smiles</span>
+              <h1 className="text-4xl font-bold text-gray-600" style={{color: '#6B7280'}}>
+                Titanium Smiles
               </h1>
             </div>
             <p className="text-xs text-gray-700">
@@ -316,7 +315,7 @@ Bhopal, Madhya Pradesh - 462016
               </div>
               <div className="border-t border-gray-800 pt-2 text-sm font-semibold">
                 <div>AUTHORISED SIGNATORY FOR</div>
-                <div>Titanium Smiles</div>
+                <div className="text-gray-500">Titanium Smiles</div>
               </div>
             </div>
           </div>

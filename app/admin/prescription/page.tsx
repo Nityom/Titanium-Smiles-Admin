@@ -181,6 +181,14 @@ const PrescriptionPage = () => {
   // State for oral examination notes
   const [oralExamNotes, setOralExamNotes] = useState<string>('');
 
+  // States for quick-add modals
+  const [showQuickAddDental, setShowQuickAddDental] = useState<boolean>(false);
+  const [quickAddToothNumber, setQuickAddToothNumber] = useState<string>('');
+  const [quickAddDisease, setQuickAddDisease] = useState<string>('');
+  const [showQuickAddTreatment, setShowQuickAddTreatment] = useState<boolean>(false);
+  const [quickAddTreatmentDescription, setQuickAddTreatmentDescription] = useState<string>('');
+  const [quickAddTreatmentPrice, setQuickAddTreatmentPrice] = useState<string>('');
+
   const [medicineOptions, setMedicineOptions] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
@@ -409,6 +417,46 @@ const PrescriptionPage = () => {
   // Handler for removing a tooth from selection
   const handleRemoveTooth = (toothId: number) => {
     setSelectedTeeth(teeth => teeth.filter(tooth => tooth.id !== toothId));
+  };
+
+  // Handler for quick-adding a dental disease
+  const handleQuickAddDental = () => {
+    if (quickAddToothNumber && quickAddDisease) {
+      const quadrant = parseInt(quickAddToothNumber[0]);
+      const number = parseInt(quickAddToothNumber.slice(1));
+      const quadrantName = DENTAL_QUADRANTS.find(q => q.id === quadrant)?.name || '';
+
+      const newTooth: ToothData = {
+        id: parseInt(quickAddToothNumber),
+        type: number >= 9 ? 'Permanent' : 'Deciduous',
+        category: quadrantName,
+        disease: quickAddDisease
+      };
+
+      setSelectedTeeth([...selectedTeeth, newTooth]);
+      setQuickAddToothNumber('');
+      setQuickAddDisease('');
+      setShowQuickAddDental(false);
+    }
+  };
+
+  // Handler for quick-adding a treatment item
+  const handleQuickAddTreatment = () => {
+    if (quickAddTreatmentDescription && quickAddTreatmentPrice) {
+      const price = parseFloat(quickAddTreatmentPrice) || 0;
+      const newItem: TreatmentItem = {
+        id: treatmentItems.length + 1,
+        description: quickAddTreatmentDescription,
+        quantity: 1,
+        unitPrice: price,
+        total: price
+      };
+
+      setTreatmentItems([...treatmentItems, newItem]);
+      setQuickAddTreatmentDescription('');
+      setQuickAddTreatmentPrice('');
+      setShowQuickAddTreatment(false);
+    }
   };
 
   // Add function to load prescription data
@@ -1341,7 +1389,16 @@ const PrescriptionPage = () => {
               {/* Selected Teeth Summary */}
               {selectedTeeth.length > 0 && (
                 <div className="mt-4 p-3 bg-white rounded-lg border border-indigo-200">
-                  <h4 className="font-medium text-indigo-800 mb-2">Selected Teeth Summary:</h4>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium text-indigo-800">Selected Teeth Summary:</h4>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickAddDental(true)}
+                      className="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm flex items-center gap-1"
+                    >
+                      <span>+</span> Add
+                    </button>
+                  </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead>
@@ -1399,6 +1456,73 @@ const PrescriptionPage = () => {
                         }).join('')
                       }
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Add Dental Modal */}
+              {showQuickAddDental && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Add Dental Disease</h3>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tooth Number</label>
+                      <select
+                        value={quickAddToothNumber}
+                        onChange={(e) => setQuickAddToothNumber(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <option value="">Select Tooth</option>
+                        {Object.entries(TEETH_BY_QUADRANT).map(([quadrant, teeth]) => (
+                          <optgroup key={quadrant} label={DENTAL_QUADRANTS.find(q => q.id === parseInt(quadrant))?.name || `Quadrant ${quadrant}`}>
+                            {teeth.map((tooth) => (
+                              <option key={`${quadrant}${tooth.number}`} value={`${quadrant}${tooth.number}`}>
+                                {`${quadrant}${tooth.number} - ${tooth.name}`}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Dental Disease</label>
+                      <select
+                        value={quickAddDisease}
+                        onChange={(e) => setQuickAddDisease(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <option value="">Select Disease</option>
+                        {DENTAL_DISEASES.map((disease) => (
+                          <option key={disease} value={disease}>
+                            {disease}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowQuickAddDental(false);
+                          setQuickAddToothNumber('');
+                          setQuickAddDisease('');
+                        }}
+                        className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleQuickAddDental}
+                        disabled={!quickAddToothNumber || !quickAddDisease}
+                        className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        Add
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1511,7 +1635,18 @@ const PrescriptionPage = () => {
 
             {/* Treatment Done Section */}
             <div className="bg-teal-50 p-6 rounded-lg border border-teal-100">
-              <h3 className="text-xl font-semibold mb-4 text-teal-800">Treatment Done</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-teal-800">Treatment Done</h3>
+                {treatmentItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickAddTreatment(true)}
+                    className="px-3 py-1 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition text-sm flex items-center gap-1"
+                  >
+                    <span>+</span> Add
+                  </button>
+                )}
+              </div>
               <p className="text-sm text-gray-600 mb-4">Add treatments/services completed during this visit. Bills will be auto-generated from these items.</p>
 
               {/* Add Treatment/Service */}
@@ -1630,6 +1765,61 @@ const PrescriptionPage = () => {
                       </tr>
                     </tfoot>
                   </table>
+                </div>
+              )}
+
+              {/* Quick Add Treatment Modal */}
+              {showQuickAddTreatment && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Add Treatment</h3>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Treatment Description</label>
+                      <input
+                        type="text"
+                        value={quickAddTreatmentDescription}
+                        onChange={(e) => setQuickAddTreatmentDescription(e.target.value)}
+                        placeholder="e.g., Root Canal, Filling, etc."
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                      />
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Price (₹)</label>
+                      <input
+                        type="number"
+                        value={quickAddTreatmentPrice}
+                        onChange={(e) => setQuickAddTreatmentPrice(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowQuickAddTreatment(false);
+                          setQuickAddTreatmentDescription('');
+                          setQuickAddTreatmentPrice('');
+                        }}
+                        className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleQuickAddTreatment}
+                        disabled={!quickAddTreatmentDescription || !quickAddTreatmentPrice}
+                        className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
