@@ -28,7 +28,7 @@ export const create = mutation({
         // Generate sequential bill number: KSD-INV-{YEAR}-{SEQ}
         const year = new Date().getFullYear();
         const allBills = await ctx.db.query("bills").collect();
-        const yearPrefix = `KSD-INV-${year}-`;
+        const yearPrefix = `TS-INV-${year}-`;
         const yearBills = allBills.filter(
             (b) => typeof b.bill_number === "string" && b.bill_number.startsWith(yearPrefix)
         );
