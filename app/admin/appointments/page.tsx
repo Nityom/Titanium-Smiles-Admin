@@ -43,7 +43,6 @@ import {
   createAppointment,
   deleteAppointment,
   getAllAppointments,
-  getAvailableSlots,
   updateAppointment,
 } from "@/services/appointments";
 import {
@@ -290,7 +289,6 @@ export default function AppointmentsPage() {
   const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(
     null,
   );
-  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -345,9 +343,6 @@ export default function AppointmentsPage() {
 
   const loadAvailableSlots = async (date: string, doctorName: string) => {
     try {
-      const slots = await getAvailableSlots(date, doctorName);
-      setAvailableSlots(slots);
-
       const allAppointments = await getAllAppointments(500);
       const bookedForDate = new Set(
         allAppointments
@@ -364,6 +359,16 @@ export default function AppointmentsPage() {
       console.error("Error loading available slots:", error);
     }
   };
+
+  const timeSlotOptions = useMemo(() => {
+    if (
+      formData.appointment_time &&
+      !ALL_TIME_SLOTS.includes(formData.appointment_time)
+    ) {
+      return [...ALL_TIME_SLOTS, formData.appointment_time].sort();
+    }
+    return ALL_TIME_SLOTS;
+  }, [formData.appointment_time]);
 
   const handleOpenDialog = (appointment?: Appointment) => {
     if (appointment) {
@@ -1264,23 +1269,30 @@ export default function AppointmentsPage() {
                     <SelectValue placeholder="Select time slot" />
                   </SelectTrigger>
                   <SelectContent className="border-gray-300 bg-white">
-                    {(availableSlots.length > 0 ? availableSlots : ALL_TIME_SLOTS).map(
-                      (slot) => {
-                        const isBooked = bookedSlots.has(slot);
-                        return (
-                          <SelectItem
-                            key={slot}
-                            value={slot}
-                            disabled={isBooked}
-                            className={
-                              isBooked ? "text-red-600 opacity-60" : "text-gray-900"
-                            }
-                          >
-                            {slot} {isBooked ? "(Booked)" : "(Available)"}
-                          </SelectItem>
-                        );
-                      },
-                    )}
+                    {timeSlotOptions.map((slot) => {
+                      const isBooked = bookedSlots.has(slot);
+                      const isCurrentEditSlot =
+                        isEditMode &&
+                        selectedAppointment &&
+                        slot === selectedAppointment.appointment_time &&
+                        formData.appointment_date === selectedAppointment.appointment_date &&
+                        formData.doctor_name === resolveDoctorName(selectedAppointment);
+
+                      return (
+                        <SelectItem
+                          key={slot}
+                          value={slot}
+                          disabled={isBooked && !isCurrentEditSlot}
+                          className={
+                            isBooked && !isCurrentEditSlot
+                              ? "text-red-600 opacity-60"
+                              : "text-gray-900"
+                          }
+                        >
+                          {slot} {isBooked ? "(booked)" : "(available)"}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               )}
