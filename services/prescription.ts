@@ -53,10 +53,12 @@ export interface Prescription {
   investigation?: string;
   diagnosis?: string;
   treatment_plan?: string[];
+  treatmentPlan?: string[];
   oral_exam_notes?: string;
   selected_teeth?: ToothData[];
   medicines?: MedicineEntry[];
   treatment_done?: TreatmentItem[];
+  treatmentDone?: TreatmentItem[];
   advice?: string;
   followup_date?: string;
   created_at?: string;
@@ -122,4 +124,3 @@ export const getPrescriptionsByPatient = async (patientId: string) => {
   const data = await convex.query(api.prescriptions.listByPatient, { reference_number: patientId });
   return data.map((item: any) => ({ ...item, id: item._id })) as Prescription[];
 };
-
