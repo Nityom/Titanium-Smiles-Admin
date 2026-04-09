@@ -301,7 +301,7 @@ function generatePDF(doc: jsPDF, billData: BillData): void {
   yPos += 4;
   centerText('Bihar, India - 842001', yPos, 8);
   yPos += 4;
-  centerText('Phone: +91 9917609177\n | Email:  info@titaniumsmiles.in', yPos, 8);
+  centerText('Phone: +91 9917609177\n | Email:  titaniumsmiles.in@gmail.com', yPos, 8);
   yPos += 8;
 
   // Add invoice header
@@ -395,9 +395,11 @@ function generatePDF(doc: jsPDF, billData: BillData): void {
 
   yPos+=7;
   // Patient details (right column)
+  const displayedReferenceNumber = normalizeReferenceNumber(billData.patient.reference_number);
+
   doc.text('Patient Name:', rightCol, yPos);
   doc.text('Age/Sex:', rightCol, yPos + 7);
-  if (billData.patient.reference_number) {
+  if (displayedReferenceNumber) {
     doc.text('Reference No:', rightCol, yPos + 14);
   }
   
@@ -409,9 +411,9 @@ function generatePDF(doc: jsPDF, billData: BillData): void {
   const ageSexX = pageWidth - margin - doc.getStringUnitWidth(ageSexText) * 10 / doc.internal.scaleFactor;
   doc.text(ageSexText, ageSexX, yPos + 7);
   
-  if (billData.patient.reference_number) {
-    const refNumberX = pageWidth - margin - doc.getStringUnitWidth(billData.patient.reference_number) * 10 / doc.internal.scaleFactor;
-    doc.text(billData.patient.reference_number, refNumberX, yPos + 14);
+  if (displayedReferenceNumber) {
+    const refNumberX = pageWidth - margin - doc.getStringUnitWidth(displayedReferenceNumber) * 10 / doc.internal.scaleFactor;
+    doc.text(displayedReferenceNumber, refNumberX, yPos + 14);
   }
   
   yPos += 25;
@@ -744,6 +746,11 @@ function safeFormatDate(dateValue: string | null | undefined, fallback?: string)
   }
   
   return formatDate(dateValue);
+}
+
+function normalizeReferenceNumber(referenceNumber?: string): string {
+  if (!referenceNumber) return '';
+  return referenceNumber.replace(/^TS/, 'KS');
 }
 
 // Format currency with proper spacing
