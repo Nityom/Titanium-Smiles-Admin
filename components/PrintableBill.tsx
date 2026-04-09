@@ -42,7 +42,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
   total,
   amountPaid = 0,
   balance = 0,
-  termsAndConditions = 'All disputes are subject to Muzaffarpur jurisdiction only',
+  termsAndConditions = 'All disputes are subject to Bhopal jurisdiction only',
   showPrintButton = true,
 }) => {
   const [mounted, setMounted] = useState(false);
