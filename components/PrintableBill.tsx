@@ -310,7 +310,7 @@ Bhopal, Madhya Pradesh - 462016
                 <img 
                   src="/sign.png" 
                   alt="Signature" 
-                  className="max-h-16 w-auto object-contain"
+                  className="max-h-20 w-auto object-contain"
                 />
               </div>
               <div className="border-t border-gray-800 pt-2 text-sm font-semibold">

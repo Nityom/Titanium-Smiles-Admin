@@ -2089,7 +2089,7 @@ const PrescriptionPage = () => {
                     src="/sign.png"
                     alt="Doctor's Signature"
                     className="inline-block"
-                    style={{ height: '60px', width: 'auto' }}
+                    style={{ height: '90px', width: 'auto' }}
                   />
                 </div>
                 <div className="font-semibold">Doctor&apos;s Signature</div>

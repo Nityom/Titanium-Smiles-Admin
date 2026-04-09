@@ -84,18 +84,51 @@ export const create = mutation({
 export const getByDate = query({
   args: {
     appointment_date: v.string(),
+    doctor_name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const appointments = await ctx.db
       .query("appointments")
       .withIndex("by_date", (q) => q.eq("appointment_date", args.appointment_date))
-      .filter((q) => q.neq(q.field("status"), "CANCELLED"))
+      .filter((q) =>
+        args.doctor_name
+          ? q.and(
+              q.neq(q.field("status"), "CANCELLED"),
+              q.eq(q.field("doctor_name"), args.doctor_name)
+            )
+          : q.neq(q.field("status"), "CANCELLED")
+      )
       .collect();
 
     // Sort by time
     return appointments.sort((a, b) => {
       return a.appointment_time.localeCompare(b.appointment_time);
     });
+  },
+});
+
+export const getBookedSlots = query({
+  args: {
+    appointment_date: v.string(),
+    doctor_name: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const appointments = await ctx.db
+      .query("appointments")
+      .withIndex("by_date", (q) => q.eq("appointment_date", args.appointment_date))
+      .filter((q) =>
+        args.doctor_name
+          ? q.and(
+              q.neq(q.field("status"), "CANCELLED"),
+              q.eq(q.field("doctor_name"), args.doctor_name)
+            )
+          : q.neq(q.field("status"), "CANCELLED")
+      )
+      .collect();
+
+    return appointments
+      .map((appointment) => appointment.appointment_time)
+      .sort((a, b) => a.localeCompare(b));
   },
 });
 
@@ -275,4 +308,3 @@ export const getAvailableSlots = query({
     return slots.filter((slot) => !bookedTimes.has(slot));
   },
 });
-

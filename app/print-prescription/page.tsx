@@ -48,6 +48,19 @@ interface PrescriptionData {
   followup_date?: string;
 }
 
+function parseArrayField<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? (parsed as T[]) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function PrintPrescriptionContent() {
   const searchParams = useSearchParams();
   const prescriptionId = searchParams.get('prescriptionId');
@@ -65,7 +78,24 @@ function PrintPrescriptionContent() {
 
       try {
         const data = await getPrescriptionById(prescriptionId);
-        setPrescriptionData(data as PrescriptionData);
+        if (!data) {
+          setPrescriptionData(null);
+          return;
+        }
+
+        const treatmentPlan = parseArrayField<string>(
+          data.treatment_plan ?? data.treatmentPlan
+        ).filter((step): step is string => typeof step === 'string' && step.trim().length > 0);
+
+        const treatmentDone = parseArrayField<TreatmentItem>(
+          data.treatment_done ?? data.treatmentDone
+        );
+
+        setPrescriptionData({
+          ...data,
+          treatment_plan: treatmentPlan,
+          treatment_done: treatmentDone,
+        } as PrescriptionData);
       } catch (err) {
         console.error('Error fetching prescription:', err);
         setError(err instanceof Error ? err.message : 'Failed to load prescription data');
