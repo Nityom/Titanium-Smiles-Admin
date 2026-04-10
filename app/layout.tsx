@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Titanium Smiles",
   icons: {
-    icon: "/dental_logo.svg",
+    icon: "/favicon.ico",
   },
 };
 
