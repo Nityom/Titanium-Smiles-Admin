@@ -88,6 +88,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
     billDate: new Date().toISOString().split('T')[0],
     paymentMethod: 'Cash',
     discount: 0,
+    discountType: 'percent' as 'percent' | 'rupees',
     consultationFee: 500,
     amountPaid: 0,
     paymentStatus: 'Full Payment',
@@ -112,10 +113,15 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
   const calculateTotals = useCallback(() => {
     const itemsTotal = billItems.reduce((sum, item) => sum + item.total, 0);
     const subtotal = itemsTotal + billData.consultationFee;
-    const discountAmount = (subtotal * billData.discount) / 100;
+    const discountAmount = billData.discountType === 'rupees'
+      ? Math.min(billData.discount, subtotal)
+      : (subtotal * billData.discount) / 100;
+    const discountPercent = billData.discountType === 'rupees'
+      ? subtotal > 0 ? (discountAmount / subtotal) * 100 : 0
+      : billData.discount;
     const totalAmount = subtotal - discountAmount;
-    return { itemsTotal, subtotal, discountAmount, totalAmount };
-  }, [billItems, billData.consultationFee, billData.discount]);
+    return { itemsTotal, subtotal, discountAmount, discountPercent, totalAmount };
+  }, [billItems, billData.consultationFee, billData.discount, billData.discountType]);
 
   const totals = calculateTotals();
 
@@ -176,7 +182,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
         financials: {
           consultationFee: billData.consultationFee,
           subtotal: totals.subtotal,
-          discountPercent: billData.discount,
+          discountPercent: totals.discountPercent,
           discountAmount: totals.discountAmount,
           total: totals.totalAmount,
           amountPaid: billData.amountPaid,
@@ -275,7 +281,7 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
         bill_number: billData.billNumber,
         bill_date: billData.billDate,
         payment_method: billData.paymentMethod,
-        discount_percent: billData.discount,
+        discount_percent: totals.discountPercent,
         discount_amount: totals.discountAmount,
         total_amount: totals.totalAmount,
         paid_amount: paidAmount,
@@ -353,10 +359,17 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    if (name === 'discount') {
+    if (name === 'discountType') {
+      setBillData(prev => ({
+        ...prev,
+        discountType: value as 'percent' | 'rupees',
+        discount: 0,
+      }));
+    } else if (name === 'discount') {
       const discountValue = parseFloat(value) || 0;
-      // Limit discount to 0-100%
-      const clampedDiscount = Math.min(Math.max(discountValue, 0), 100);
+      const clampedDiscount = billData.discountType === 'percent'
+        ? Math.min(Math.max(discountValue, 0), 100)
+        : Math.max(discountValue, 0);
       setBillData(prev => ({
         ...prev,
         [name]: clampedDiscount,
@@ -748,17 +761,35 @@ const BillForm: React.FC<BillFormProps> = ({ patientData, diagnosis, selectedTee
                 <tr>
                   <td colSpan={3} className="px-4 py-3 text-right font-medium">Discount:</td>
                   <td className="px-4 py-3">
-                    <input 
-                      type="number" 
-                      name="discount"
-                      value={billData.discount} 
-                      onChange={handleInputChange}
-                      className="w-16 p-1 border border-gray-300 rounded text-right"
-                      min="0"
-                      max="100"
-                    /> %
+                    <div className="flex items-center gap-2">
+                      <select
+                        name="discountType"
+                        value={billData.discountType}
+                        onChange={handleInputChange}
+                        className="p-1 border border-gray-300 rounded text-sm"
+                      >
+                        <option value="percent">%</option>
+                        <option value="rupees">₹</option>
+                      </select>
+                      <input
+                        type="number"
+                        name="discount"
+                        value={billData.discount}
+                        onChange={handleInputChange}
+                        className="w-20 p-1 border border-gray-300 rounded text-right"
+                        min="0"
+                        max={billData.discountType === 'percent' ? 100 : undefined}
+                        placeholder="0"
+                      />
+                      <span className="text-gray-500 text-sm">{billData.discountType === 'percent' ? '%' : '₹'}</span>
+                    </div>
                   </td>
-                  <td colSpan={2} className="px-4 py-3 font-medium">₹ {totals.discountAmount.toFixed(2)}</td>
+                  <td colSpan={2} className="px-4 py-3 font-medium">
+                    ₹ {totals.discountAmount.toFixed(2)}
+                    {billData.discountType === 'rupees' && totals.subtotal > 0 && (
+                      <span className="ml-2 text-xs text-gray-500">({totals.discountPercent.toFixed(1)}%)</span>
+                    )}
+                  </td>
                 </tr>
                 <tr className="bg-amber-100">
                   <td colSpan={4} className="px-4 py-3 text-right font-bold">Total Amount Payable:</td>

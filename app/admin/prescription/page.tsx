@@ -145,6 +145,8 @@ const PrescriptionPage = () => {
   });
 
   const [treatmentItems, setTreatmentItems] = useState<TreatmentItem[]>([]);
+  const [treatmentDiscount, setTreatmentDiscount] = useState<number>(0);
+  const [treatmentDiscountType, setTreatmentDiscountType] = useState<'percent' | 'rupees'>('percent');
   const [newTreatmentStep, setNewTreatmentStep] = useState('');
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -202,6 +204,8 @@ const PrescriptionPage = () => {
     amountPaid: 0,
     paymentMethod: 'Cash',
     discountPercent: 0,
+    discountType: 'percent' as 'percent' | 'rupees',
+    discountRupees: 0,
   });
 
   useEffect(() => {
@@ -784,7 +788,14 @@ const PrescriptionPage = () => {
       if (savedPrescription?.id && patient?.id) {
         try {
           const consultationFee = 0; // Changed from 500 to 0 to avoid hiding charges not shown in the UI
-          const treatmentTotal = treatmentItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+          const treatmentSubtotal = treatmentItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+          const treatmentDiscountAmt = treatmentDiscountType === 'rupees'
+            ? Math.min(treatmentDiscount, treatmentSubtotal)
+            : (treatmentSubtotal * treatmentDiscount) / 100;
+          const treatmentDiscountPct = treatmentDiscountType === 'rupees'
+            ? (treatmentSubtotal > 0 ? (treatmentDiscountAmt / treatmentSubtotal) * 100 : 0)
+            : treatmentDiscount;
+          const treatmentTotal = treatmentSubtotal - treatmentDiscountAmt;
 
           // Calculate medicine total cost
           const medicineItems = medicines
@@ -837,7 +848,9 @@ const PrescriptionPage = () => {
           if (existingBill && existingBill.id) {
             // Update existing bill with new items and amounts
             await updateBill(existingBill.id, {
-              total_amount: totalAmount,
+              total_amount: totalAmount - treatmentDiscountAmt,
+              discount_percent: treatmentDiscountPct,
+              discount_amount: treatmentDiscountAmt,
               items: billItems
             });
             console.log('Bill updated successfully with consultation fee, treatments, and medicines');
@@ -847,7 +860,9 @@ const PrescriptionPage = () => {
               prescription_id: savedPrescription.id,
               patient_id: patient.id,
               reference_number: patient.reference_number || '',
-              total_amount: totalAmount,
+              total_amount: totalAmount - treatmentDiscountAmt,
+              discount_percent: treatmentDiscountPct,
+              discount_amount: treatmentDiscountAmt,
               paid_amount: 0,
               payment_status: 'PENDING',
               items: billItems
@@ -1014,6 +1029,8 @@ const PrescriptionPage = () => {
         amountPaid: bill.paid_amount || 0,
         paymentMethod: bill.payment_method || 'Cash',
         discountPercent: bill.discount_percent || 0,
+        discountType: 'percent',
+        discountRupees: 0,
       });
 
       // Show payment modal
@@ -1030,13 +1047,19 @@ const PrescriptionPage = () => {
 
     try {
       // Update bill with payment details
-      const discountAmt = Math.round((Number(currentBill.total_amount) * paymentDetails.discountPercent) / 100);
-      const newTotal = Math.round(Number(currentBill.total_amount) - discountAmt);
+      const origTotal = Number(currentBill.total_amount);
+      const discountAmt = paymentDetails.discountType === 'rupees'
+        ? Math.min(paymentDetails.discountRupees, origTotal)
+        : Math.round((origTotal * paymentDetails.discountPercent) / 100);
+      const discountPct = paymentDetails.discountType === 'rupees'
+        ? (origTotal > 0 ? (discountAmt / origTotal) * 100 : 0)
+        : paymentDetails.discountPercent;
+      const newTotal = Math.round(origTotal - discountAmt);
       const safePaid = Math.round(Math.min(Math.max(paymentDetails.amountPaid, 0), newTotal));
       await updateBill(currentBill.id, {
         paid_amount: safePaid,
         payment_method: paymentDetails.paymentMethod,
-        discount_percent: paymentDetails.discountPercent,
+        discount_percent: discountPct,
         discount_amount: discountAmt,
         total_amount: newTotal,
         balance_amount: Math.max(newTotal - safePaid, 0),
@@ -1755,9 +1778,72 @@ const PrescriptionPage = () => {
                     </tbody>
                     <tfoot className="bg-gray-50">
                       <tr>
+                        <td colSpan={4} className="px-4 py-3 text-right font-medium">Subtotal:</td>
+                        <td colSpan={2} className="px-4 py-3 font-medium">
+                          ₹{treatmentItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colSpan={3} className="px-4 py-3 text-right font-medium">Discount:</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={treatmentDiscountType}
+                              onChange={(e) => {
+                                setTreatmentDiscountType(e.target.value as 'percent' | 'rupees');
+                                setTreatmentDiscount(0);
+                              }}
+                              className="p-1 border border-gray-300 rounded text-sm"
+                            >
+                              <option value="percent">%</option>
+                              <option value="rupees">₹</option>
+                            </select>
+                            <input
+                              type="number"
+                              value={treatmentDiscount}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setTreatmentDiscount(
+                                  treatmentDiscountType === 'percent'
+                                    ? Math.min(Math.max(val, 0), 100)
+                                    : Math.max(val, 0)
+                                );
+                              }}
+                              className="w-20 p-1 border border-gray-300 rounded text-right"
+                              min="0"
+                              max={treatmentDiscountType === 'percent' ? 100 : undefined}
+                              placeholder="0"
+                            />
+                            <span className="text-gray-500 text-sm">{treatmentDiscountType === 'percent' ? '%' : '₹'}</span>
+                          </div>
+                        </td>
+                        <td colSpan={2} className="px-4 py-3 font-medium text-red-600">
+                          {(() => {
+                            const sub = treatmentItems.reduce((s, i) => s + i.total, 0);
+                            const amt = treatmentDiscountType === 'rupees'
+                              ? Math.min(treatmentDiscount, sub)
+                              : (sub * treatmentDiscount) / 100;
+                            return (
+                              <>
+                                - ₹{amt.toFixed(2)}
+                                {treatmentDiscountType === 'rupees' && sub > 0 && (
+                                  <span className="ml-1 text-xs text-gray-500">({((amt / sub) * 100).toFixed(1)}%)</span>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                      <tr className="bg-teal-50">
                         <td colSpan={4} className="px-4 py-3 text-right font-bold">Total Amount:</td>
                         <td colSpan={2} className="px-4 py-3 font-bold text-lg text-teal-700">
-                          ₹{treatmentItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                          {(() => {
+                            const sub = treatmentItems.reduce((s, i) => s + i.total, 0);
+                            const amt = treatmentDiscountType === 'rupees'
+                              ? Math.min(treatmentDiscount, sub)
+                              : (sub * treatmentDiscount) / 100;
+                            return `₹${(sub - amt).toFixed(2)}`;
+                          })()}
                         </td>
                       </tr>
                     </tfoot>
@@ -2115,14 +2201,19 @@ const PrescriptionPage = () => {
 
                 {(() => {
                   const origTotal = Number(currentBill.total_amount);
-                  const discAmt = Math.round((origTotal * paymentDetails.discountPercent) / 100);
+                  const discAmt = paymentDetails.discountType === 'rupees'
+                    ? Math.min(paymentDetails.discountRupees, origTotal)
+                    : Math.round((origTotal * paymentDetails.discountPercent) / 100);
+                  const discPct = paymentDetails.discountType === 'rupees'
+                    ? (origTotal > 0 ? ((discAmt / origTotal) * 100).toFixed(1) : '0')
+                    : paymentDetails.discountPercent;
                   const payable = Math.round(origTotal - discAmt);
                   const balance = Math.max(payable - Math.round(paymentDetails.amountPaid), 0);
                   return (
                     <div className="mb-4">
                       <p className="text-sm text-gray-600 mb-1">Total Amount: <span className="font-bold text-gray-900">₹{origTotal.toLocaleString('en-IN')}</span></p>
-                      {paymentDetails.discountPercent > 0 && (
-                        <p className="text-sm text-gray-600 mb-1">Discount ({paymentDetails.discountPercent}%): <span className="font-bold text-green-600">- ₹{discAmt.toLocaleString('en-IN')}</span></p>
+                      {discAmt > 0 && (
+                        <p className="text-sm text-gray-600 mb-1">Discount ({discPct}%): <span className="font-bold text-green-600">- ₹{discAmt.toLocaleString('en-IN')}</span></p>
                       )}
                       <p className="text-sm text-gray-600 mb-1">Payable: <span className="font-bold text-gray-900">₹{payable.toLocaleString('en-IN')}</span></p>
                       <p className="text-sm text-gray-600 mb-4">Balance Due: <span className="font-bold text-red-600">₹{balance.toLocaleString('en-IN')}</span></p>
@@ -2131,17 +2222,40 @@ const PrescriptionPage = () => {
                 })()}
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Discount (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value={paymentDetails.discountPercent}
-                    onChange={(e) => setPaymentDetails({ ...paymentDetails, discountPercent: Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 100) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Discount</label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={paymentDetails.discountType}
+                      onChange={(e) => setPaymentDetails({
+                        ...paymentDetails,
+                        discountType: e.target.value as 'percent' | 'rupees',
+                        discountPercent: 0,
+                        discountRupees: 0,
+                      })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="percent">%</option>
+                      <option value="rupees">₹</option>
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      max={paymentDetails.discountType === 'percent' ? 100 : undefined}
+                      step="1"
+                      value={paymentDetails.discountType === 'percent' ? paymentDetails.discountPercent : paymentDetails.discountRupees}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        if (paymentDetails.discountType === 'percent') {
+                          setPaymentDetails({ ...paymentDetails, discountPercent: Math.min(Math.max(val, 0), 100) });
+                        } else {
+                          setPaymentDetails({ ...paymentDetails, discountRupees: Math.max(val, 0) });
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="0"
+                    />
+                    <span className="text-gray-500 text-sm w-6">{paymentDetails.discountType === 'percent' ? '%' : '₹'}</span>
+                  </div>
                 </div>
 
                 <div className="mb-4">
@@ -2149,11 +2263,21 @@ const PrescriptionPage = () => {
                   <input
                     type="number"
                     min="0"
-                    max={Math.round(Number(currentBill.total_amount) - Math.round((Number(currentBill.total_amount) * paymentDetails.discountPercent) / 100))}
+                    max={(() => {
+                      const origTotal = Number(currentBill.total_amount);
+                      const discAmt = paymentDetails.discountType === 'rupees'
+                        ? Math.min(paymentDetails.discountRupees, origTotal)
+                        : Math.round((origTotal * paymentDetails.discountPercent) / 100);
+                      return Math.round(origTotal - discAmt);
+                    })()}
                     step="1"
                     value={paymentDetails.amountPaid}
                     onChange={(e) => {
-                      const payable = Math.round(Number(currentBill.total_amount) - Math.round((Number(currentBill.total_amount) * paymentDetails.discountPercent) / 100));
+                      const origTotal = Number(currentBill.total_amount);
+                      const discAmt = paymentDetails.discountType === 'rupees'
+                        ? Math.min(paymentDetails.discountRupees, origTotal)
+                        : Math.round((origTotal * paymentDetails.discountPercent) / 100);
+                      const payable = Math.round(origTotal - discAmt);
                       const val = Math.round(Math.min(Math.max(parseFloat(e.target.value) || 0, 0), payable));
                       setPaymentDetails({ ...paymentDetails, amountPaid: val });
                     }}
@@ -2180,7 +2304,11 @@ const PrescriptionPage = () => {
                   <p className="text-sm font-medium text-gray-700">
                     Payment Status:
                     {(() => {
-                      const payable = Math.round(Number(currentBill.total_amount) - Math.round((Number(currentBill.total_amount) * paymentDetails.discountPercent) / 100));
+                      const origTotal = Number(currentBill.total_amount);
+                      const discAmt2 = paymentDetails.discountType === 'rupees'
+                        ? Math.min(paymentDetails.discountRupees, origTotal)
+                        : Math.round((origTotal * paymentDetails.discountPercent) / 100);
+                      const payable = Math.round(origTotal - discAmt2);
                       const status = paymentDetails.amountPaid === 0 ? 'PENDING' : paymentDetails.amountPaid >= payable ? 'PAID' : 'PARTIAL';
                       const cls = status === 'PENDING' ? 'bg-red-100 text-red-700' : status === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
                       return <span className={`ml-2 px-2 py-1 rounded text-xs font-bold ${cls}`}>{status}</span>;
