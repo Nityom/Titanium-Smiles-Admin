@@ -121,7 +121,9 @@ interface TreatmentItem {
   description: string;
   quantity: number;
   unitPrice: number;
-  total: number;
+  discount: number;
+  discountType: 'percent' | 'rupees';
+  total: number; // after per-item discount
 }
 
 const PrescriptionPage = () => {
@@ -145,8 +147,6 @@ const PrescriptionPage = () => {
   });
 
   const [treatmentItems, setTreatmentItems] = useState<TreatmentItem[]>([]);
-  const [treatmentDiscount, setTreatmentDiscount] = useState<number>(0);
-  const [treatmentDiscountType, setTreatmentDiscountType] = useState<'percent' | 'rupees'>('percent');
   const [newTreatmentStep, setNewTreatmentStep] = useState('');
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -509,6 +509,8 @@ const PrescriptionPage = () => {
               description: item.description || '',
               quantity: item.quantity || 1,
               unitPrice: item.unit_price || item.unitPrice || 0,
+              discount: item.discount || 0,
+              discountType: (item.discountType || 'percent') as 'percent' | 'rupees',
               total: item.total || 0
             }));
             setTreatmentItems(mappedItems);
@@ -788,14 +790,11 @@ const PrescriptionPage = () => {
       if (savedPrescription?.id && patient?.id) {
         try {
           const consultationFee = 0; // Changed from 500 to 0 to avoid hiding charges not shown in the UI
-          const treatmentSubtotal = treatmentItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-          const treatmentDiscountAmt = treatmentDiscountType === 'rupees'
-            ? Math.min(treatmentDiscount, treatmentSubtotal)
-            : (treatmentSubtotal * treatmentDiscount) / 100;
-          const treatmentDiscountPct = treatmentDiscountType === 'rupees'
-            ? (treatmentSubtotal > 0 ? (treatmentDiscountAmt / treatmentSubtotal) * 100 : 0)
-            : treatmentDiscount;
-          const treatmentTotal = treatmentSubtotal - treatmentDiscountAmt;
+          // Use item.total which already has per-item discounts applied
+          const treatmentSubtotal = treatmentItems.reduce((sum, item) => sum + item.total, 0);
+          const treatmentDiscountAmt = 0;
+          const treatmentDiscountPct = 0;
+          const treatmentTotal = treatmentSubtotal;
 
           // Calculate medicine total cost
           const medicineItems = medicines
@@ -832,7 +831,7 @@ const PrescriptionPage = () => {
               description: item.description,
               quantity: item.quantity,
               unit_price: item.unitPrice,
-              total: item.unitPrice * item.quantity,
+              total: item.total,  // after per-item discount
               item_type: 'procedure' as const
             })),
             ...medicineItems
@@ -1045,6 +1044,10 @@ const PrescriptionPage = () => {
   const handlePrintBill = async () => {
     if (!currentBill) return;
 
+    // Open the window immediately (synchronous, user-gesture context) to avoid popup blockers.
+    // We navigate it to the correct URL after the DB update succeeds.
+    const printWindow = window.open('', '_blank');
+
     try {
       // Update bill with payment details
       const origTotal = Number(currentBill.total_amount);
@@ -1068,10 +1071,16 @@ const PrescriptionPage = () => {
       // Close modal
       setShowPaymentModal(false);
 
-      // Open new printable bill page
-      window.open(`/print-bill?billId=${currentBill.id}`, '_blank');
+      // Navigate the already-opened window to the print bill page
+      if (printWindow) {
+        printWindow.location.href = `/print-bill?billId=${currentBill.id}`;
+      } else {
+        // Fallback if popup was blocked despite the synchronous open
+        window.open(`/print-bill?billId=${currentBill.id}`, '_blank');
+      }
     } catch (error) {
       console.error('Error updating bill:', error);
+      if (printWindow) printWindow.close();
       alert('Failed to update bill payment details.');
     }
   };
@@ -1685,6 +1694,8 @@ const PrescriptionPage = () => {
                             description: selected.name,
                             quantity: 1,
                             unitPrice: selected.price,
+                            discount: 0,
+                            discountType: 'percent',
                             total: selected.price
                           };
                           setTreatmentItems([...treatmentItems, newItem]);
@@ -1711,6 +1722,7 @@ const PrescriptionPage = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price (₹)</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total (₹)</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
@@ -1737,8 +1749,13 @@ const PrescriptionPage = () => {
                               value={item.quantity}
                               onChange={(e) => {
                                 const newItems = [...treatmentItems];
-                                newItems[index].quantity = parseInt(e.target.value) || 1;
-                                newItems[index].total = newItems[index].quantity * newItems[index].unitPrice;
+                                const qty = parseInt(e.target.value) || 1;
+                                newItems[index].quantity = qty;
+                                const gross = qty * newItems[index].unitPrice;
+                                const discAmt = newItems[index].discountType === 'rupees'
+                                  ? Math.min(newItems[index].discount, gross)
+                                  : (gross * newItems[index].discount) / 100;
+                                newItems[index].total = gross - discAmt;
                                 setTreatmentItems(newItems);
                               }}
                               className="w-20 p-1 border border-gray-300 rounded"
@@ -1751,8 +1768,13 @@ const PrescriptionPage = () => {
                               value={item.unitPrice}
                               onChange={(e) => {
                                 const newItems = [...treatmentItems];
-                                newItems[index].unitPrice = parseFloat(e.target.value) || 0;
-                                newItems[index].total = newItems[index].quantity * newItems[index].unitPrice;
+                                const price = parseFloat(e.target.value) || 0;
+                                newItems[index].unitPrice = price;
+                                const gross = newItems[index].quantity * price;
+                                const discAmt = newItems[index].discountType === 'rupees'
+                                  ? Math.min(newItems[index].discount, gross)
+                                  : (gross * newItems[index].discount) / 100;
+                                newItems[index].total = gross - discAmt;
                                 setTreatmentItems(newItems);
                               }}
                               className="w-24 p-1 border border-gray-300 rounded"
@@ -1760,7 +1782,53 @@ const PrescriptionPage = () => {
                             />
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            ₹{item.total.toFixed(2)}
+                            <div className="flex items-center gap-1">
+                              <select
+                                value={item.discountType}
+                                onChange={(e) => {
+                                  const newItems = [...treatmentItems];
+                                  newItems[index].discountType = e.target.value as 'percent' | 'rupees';
+                                  newItems[index].discount = 0;
+                                  newItems[index].total = newItems[index].quantity * newItems[index].unitPrice;
+                                  setTreatmentItems(newItems);
+                                }}
+                                className="p-1 border border-gray-300 rounded text-xs w-12"
+                              >
+                                <option value="percent">%</option>
+                                <option value="rupees">₹</option>
+                              </select>
+                              <input
+                                type="number"
+                                value={item.discount}
+                                onChange={(e) => {
+                                  const newItems = [...treatmentItems];
+                                  const val = parseFloat(e.target.value) || 0;
+                                  newItems[index].discount = newItems[index].discountType === 'percent'
+                                    ? Math.min(Math.max(val, 0), 100)
+                                    : Math.max(val, 0);
+                                  const gross = newItems[index].quantity * newItems[index].unitPrice;
+                                  const discAmt = newItems[index].discountType === 'rupees'
+                                    ? Math.min(newItems[index].discount, gross)
+                                    : (gross * newItems[index].discount) / 100;
+                                  newItems[index].total = gross - discAmt;
+                                  setTreatmentItems(newItems);
+                                }}
+                                className="w-16 p-1 border border-gray-300 rounded text-right"
+                                min="0"
+                                max={item.discountType === 'percent' ? 100 : undefined}
+                                placeholder="0"
+                              />
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div>
+                              {item.discount > 0 && (
+                                <div className="text-xs text-gray-400 line-through">
+                                  ₹{(item.quantity * item.unitPrice).toFixed(2)}
+                                </div>
+                              )}
+                              ₹{item.total.toFixed(2)}
+                            </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <button
@@ -1777,73 +1845,10 @@ const PrescriptionPage = () => {
                       ))}
                     </tbody>
                     <tfoot className="bg-gray-50">
-                      <tr>
-                        <td colSpan={4} className="px-4 py-3 text-right font-medium">Subtotal:</td>
-                        <td colSpan={2} className="px-4 py-3 font-medium">
-                          ₹{treatmentItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td colSpan={3} className="px-4 py-3 text-right font-medium">Discount:</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={treatmentDiscountType}
-                              onChange={(e) => {
-                                setTreatmentDiscountType(e.target.value as 'percent' | 'rupees');
-                                setTreatmentDiscount(0);
-                              }}
-                              className="p-1 border border-gray-300 rounded text-sm"
-                            >
-                              <option value="percent">%</option>
-                              <option value="rupees">₹</option>
-                            </select>
-                            <input
-                              type="number"
-                              value={treatmentDiscount}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
-                                setTreatmentDiscount(
-                                  treatmentDiscountType === 'percent'
-                                    ? Math.min(Math.max(val, 0), 100)
-                                    : Math.max(val, 0)
-                                );
-                              }}
-                              className="w-20 p-1 border border-gray-300 rounded text-right"
-                              min="0"
-                              max={treatmentDiscountType === 'percent' ? 100 : undefined}
-                              placeholder="0"
-                            />
-                            <span className="text-gray-500 text-sm">{treatmentDiscountType === 'percent' ? '%' : '₹'}</span>
-                          </div>
-                        </td>
-                        <td colSpan={2} className="px-4 py-3 font-medium text-red-600">
-                          {(() => {
-                            const sub = treatmentItems.reduce((s, i) => s + i.total, 0);
-                            const amt = treatmentDiscountType === 'rupees'
-                              ? Math.min(treatmentDiscount, sub)
-                              : (sub * treatmentDiscount) / 100;
-                            return (
-                              <>
-                                - ₹{amt.toFixed(2)}
-                                {treatmentDiscountType === 'rupees' && sub > 0 && (
-                                  <span className="ml-1 text-xs text-gray-500">({((amt / sub) * 100).toFixed(1)}%)</span>
-                                )}
-                              </>
-                            );
-                          })()}
-                        </td>
-                      </tr>
                       <tr className="bg-teal-50">
-                        <td colSpan={4} className="px-4 py-3 text-right font-bold">Total Amount:</td>
+                        <td colSpan={5} className="px-4 py-3 text-right font-bold">Total Amount:</td>
                         <td colSpan={2} className="px-4 py-3 font-bold text-lg text-teal-700">
-                          {(() => {
-                            const sub = treatmentItems.reduce((s, i) => s + i.total, 0);
-                            const amt = treatmentDiscountType === 'rupees'
-                              ? Math.min(treatmentDiscount, sub)
-                              : (sub * treatmentDiscount) / 100;
-                            return `₹${(sub - amt).toFixed(2)}`;
-                          })()}
+                          ₹{treatmentItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
                         </td>
                       </tr>
                     </tfoot>

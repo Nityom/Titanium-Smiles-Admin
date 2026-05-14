@@ -60,18 +60,35 @@ function PrintBillContent() {
           throw new Error('Bill not found');
         }
 
-        // Parse items
+        // Parse items — Amount column shows the net (after per-item discount).
+        // A separate `discount` field per item drives the DISCOUNT column.
         const items = Array.isArray(bill.items)
-          ? bill.items.map((item: any) => ({
-              id: item.id,
-              description: item.description,
-              quantity: parseFloat(item.quantity) || 1,
-              unitPrice: parseFloat(item.unit_price ?? item.unitPrice) || 0,
-              unit: item.unit || (item.item_type === 'medicine' || item.itemType === 'medicine' ? 'PCS' : 'EACH'),
-              total: parseFloat(item.total) || (parseFloat(item.quantity) * parseFloat(item.unit_price ?? item.unitPrice)),
-              itemType: item.itemType || item.item_type || 'other',
-            }))
+          ? bill.items.map((item: any) => {
+              const qty       = parseFloat(item.quantity)  || 1;
+              const unitPrice = parseFloat(item.unit_price ?? item.unitPrice) || 0;
+              const grossItem = qty * unitPrice;
+              const netItem   = parseFloat(item.total) || grossItem;
+              return {
+                id: item.id,
+                description: item.description,
+                quantity: qty,
+                unitPrice,
+                unit: item.unit || (item.item_type === 'medicine' || item.itemType === 'medicine' ? 'PCS' : 'EACH'),
+                total: netItem,                        // Amount column = net
+                discount: Math.max(grossItem - netItem, 0), // per-item discount
+                netTotal: netItem,
+                itemType: item.itemType || item.item_type || 'other',
+              };
+            })
           : [];
+
+        // Gross = sum of (qty × unitPrice), net = sum of item.netTotal
+        const grossTotal      = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+        const itemsNet        = items.reduce((s, i) => s + i.netTotal, 0);
+        const paymentDiscount = (bill as any).discount_amount || 0;
+        // No need to double-count item discounts in the footer — they're visible per row.
+        // Footer discount row = payment-modal discount only.
+        const footerDiscount  = paymentDiscount;
 
         const total = bill.total_amount || 0;
         const amountPaid = bill.paid_amount || 0;
@@ -91,8 +108,8 @@ function PrintBillContent() {
           patientAge: (bill as any).patient_age?.toString() || '',
           patientSex: (bill as any).patient_sex || '',
           items,
-          subtotal: total + ((bill as any).discount_amount || 0),
-          discount: (bill as any).discount_amount || 0,
+          subtotal: itemsNet,          // sum of net item amounts (after per-item discounts)
+          discount: footerDiscount,    // payment-modal discount shown in footer
           total,
           amountPaid,
           balance,

@@ -9,6 +9,7 @@ interface BillItem {
   unitPrice: number;
   unit?: string;
   total: number;
+  discount?: number; // per-item discount amount
   itemType?: 'medicine' | 'procedure' | 'consultation' | 'other';
 }
 
@@ -237,6 +238,9 @@ Bhopal, Madhya Pradesh - 462016
                 <th className="text-left py-2 px-2 text-sm font-semibold">ITEMS/SERVICES</th>
                 <th className="text-center py-2 px-2 text-sm font-semibold w-24">QTY</th>
                 <th className="text-right py-2 px-2 text-sm font-semibold w-28">RATE</th>
+                {items.some(i => (i.discount ?? 0) > 0) && (
+                  <th className="text-right py-2 px-2 text-sm font-semibold w-28">DISCOUNT</th>
+                )}
                 <th className="text-right py-2 px-2 text-sm font-semibold w-32">AMOUNT</th>
               </tr>
             </thead>
@@ -248,6 +252,11 @@ Bhopal, Madhya Pradesh - 462016
                     {item.quantity} {item.unit || (item.itemType === 'medicine' ? 'PCS' : 'EACH')}
                   </td>
                   <td className="py-2 px-2 text-sm text-right">{item.unitPrice.toLocaleString('en-IN')}</td>
+                  {items.some(i => (i.discount ?? 0) > 0) && (
+                    <td className="py-2 px-2 text-sm text-right text-red-600">
+                      {(item.discount ?? 0) > 0 ? `- ${formatCurrency(item.discount!)}` : '-'}
+                    </td>
+                  )}
                   <td className="py-2 px-2 text-sm text-right">{item.total.toLocaleString('en-IN')}</td>
                 </tr>
               ))}
