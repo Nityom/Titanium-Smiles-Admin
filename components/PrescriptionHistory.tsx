@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { formatDate } from "@/lib/utils";
 import { PrescriptionWithBill } from "@/types/prescription";
 import { BillSummary } from "@/components/BillSummary";
+import PrintPreviewModal from "@/components/PrintPreviewModal";
 
 interface PrescriptionHistoryProps {
   prescriptions: PrescriptionWithBill[];
@@ -12,9 +13,20 @@ interface PrescriptionHistoryProps {
 }
 
 const PrescriptionHistory: React.FC<PrescriptionHistoryProps> = ({ prescriptions, onDelete }) => {
+  const [printPreviewId, setPrintPreviewId] = useState<string | null>(null);
+
   return (
     <div>
       <h4 className="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Prescription History</h4>
+
+      {/* Print Preview Modal */}
+      {printPreviewId && (
+        <PrintPreviewModal
+          prescriptionId={printPreviewId}
+          onClose={() => setPrintPreviewId(null)}
+        />
+      )}
+
       <div className="space-y-4 mt-4">
         {prescriptions
           .sort((a, b) => new Date(b.prescription_date).getTime() - new Date(a.prescription_date).getTime())
@@ -35,6 +47,18 @@ const PrescriptionHistory: React.FC<PrescriptionHistoryProps> = ({ prescriptions
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
+                  {/* Print Preview */}
+                  <button
+                    type="button"
+                    title="Print Prescription"
+                    onClick={() => prescription.id && setPrintPreviewId(prescription.id)}
+                    className="inline-flex items-center justify-center w-8 h-8 bg-gray-600 text-white rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                  </button>
+                  {/* Edit */}
                   <Link href={`/admin/prescription?edit=true&id=${prescription.id}&patientName=${encodeURIComponent(prescription.patient_name)}&age=${prescription.age}&sex=${prescription.sex}&phoneNumber=${encodeURIComponent(prescription.phone_number)}&chiefComplaint=${encodeURIComponent(prescription.chief_complaint || '')}&medicalHistory=${encodeURIComponent(prescription.medical_history || '')}&diagnosis=${encodeURIComponent(prescription.diagnosis || '')}&date=${prescription.prescription_date}&advice=${encodeURIComponent(prescription.advice || '')}&followupDate=${prescription.followup_date || ''}`}>
                     <button
                       type="button"
@@ -46,6 +70,7 @@ const PrescriptionHistory: React.FC<PrescriptionHistoryProps> = ({ prescriptions
                       </svg>
                     </button>
                   </Link>
+                  {/* Delete */}
                   <button 
                     type="button"
                     title="Delete Prescription"

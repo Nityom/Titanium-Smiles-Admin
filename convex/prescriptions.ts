@@ -5,7 +5,7 @@ export const create = mutation({
     args: {
         patient_name: v.string(),
         phone_number: v.string(),
-        age: v.string(),
+        age: v.optional(v.string()),
         sex: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
         reference_number: v.optional(v.string()),
         prescription_date: v.string(),

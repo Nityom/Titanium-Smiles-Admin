@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { convex, convexAuthFns, hashValue, normalizeEmail } from "@/lib/server/auth";
+import { convex, convexAuthFns, hashValue, normalizeEmail, createDeviceTrustToken, DEVICE_TRUST_DURATION_MS } from "@/lib/server/auth";
 import { createAndStoreSession } from "@/lib/server/auth-flow";
 
 export const runtime = "nodejs";
 
-const SESSION_COOKIE_NAME = "ksd_auth_session";
+const SESSION_COOKIE_NAME = "tsd_auth_session";
+const DEVICE_TRUST_COOKIE_NAME = "tsd_device_trust";
 
 export async function POST(request: NextRequest) {
   try {
@@ -96,6 +97,17 @@ export async function POST(request: NextRequest) {
       sameSite: "lax",
       path: "/",
       expires: new Date(expiresAt),
+    });
+
+    // Device trust: allows re-login without OTP within 12 hours even after logout
+    response.cookies.set({
+      name: DEVICE_TRUST_COOKIE_NAME,
+      value: createDeviceTrustToken(payload.user.email),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      expires: new Date(Date.now() + DEVICE_TRUST_DURATION_MS),
     });
 
     return response;

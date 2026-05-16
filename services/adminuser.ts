@@ -4,12 +4,9 @@ type AuthUser = {
   name?: string;
 };
 
-type OtpStartResponse = {
-  otpSessionId: string;
-  deliveryEmail: string;
-  expiresAt: number;
-  message: string;
-};
+type OtpStartResponse =
+  | { directLogin: true; user: AuthUser }
+  | { directLogin?: false; otpSessionId: string; deliveryEmail: string; expiresAt: number; message: string };
 
 async function requestAuth<T>(url: string, options: RequestInit): Promise<T> {
   const response = await fetch(url, {

@@ -51,6 +51,41 @@ export function createRandomToken(): string {
   return crypto.randomBytes(32).toString("hex");
 }
 
+export const SESSION_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours
+export const DEVICE_TRUST_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+function getDeviceTrustSecret(): string {
+  return process.env.AUTH_SECRET || process.env.AUTH_DEVICE_TRUST_SECRET || "ts-device-trust-fallback-change-me";
+}
+
+export function createDeviceTrustToken(email: string): string {
+  const payload = { email: normalizeEmail(email), exp: Date.now() + DEVICE_TRUST_DURATION_MS };
+  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sig = crypto.createHmac("sha256", getDeviceTrustSecret()).update(data).digest("hex");
+  return `${data}.${sig}`;
+}
+
+export function verifyDeviceTrustToken(token: string): { email: string } | null {
+  const dotIndex = token.lastIndexOf(".");
+  if (dotIndex === -1) return null;
+  const data = token.slice(0, dotIndex);
+  const sig = token.slice(dotIndex + 1);
+  if (!data || !sig) return null;
+  const expectedSig = crypto.createHmac("sha256", getDeviceTrustSecret()).update(data).digest("hex");
+  // Constant-time comparison
+  if (sig.length !== expectedSig.length) return null;
+  let diff = 0;
+  for (let i = 0; i < sig.length; i++) diff |= sig.charCodeAt(i) ^ expectedSig.charCodeAt(i);
+  if (diff !== 0) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(data, "base64url").toString("utf8")) as { email?: string; exp?: number };
+    if (!payload.email || !payload.exp || payload.exp < Date.now()) return null;
+    return { email: payload.email };
+  } catch {
+    return null;
+  }
+}
+
 export function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!local || !domain) {

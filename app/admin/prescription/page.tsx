@@ -14,6 +14,7 @@ import { getEnabledConsumablesForDeduction } from '@/services/consumables';
 import { ConvexHttpClient } from 'convex/browser';
 // @ts-ignore
 import { api } from '@/convex/_generated/api';
+import PrintPreviewModal from '@/components/PrintPreviewModal';
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
 if (!convexUrl) {
@@ -986,12 +987,14 @@ const PrescriptionPage = () => {
     }
   };
 
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+
   const handlePrintablePrescription = () => {
     if (!prescriptionId) {
       alert('Please save the prescription first.');
       return;
     }
-    window.open(`/print-prescription?prescriptionId=${prescriptionId}`, '_blank');
+    setShowPrintPreview(true);
   };
 
   // Function to generate and print bill with payment details
@@ -1117,6 +1120,13 @@ const PrescriptionPage = () => {
 
   return (
     <div className="w-[80vw] mx-auto mt-8 p-4">
+      {/* Print Preview Modal */}
+      {showPrintPreview && prescriptionId && (
+        <PrintPreviewModal
+          prescriptionId={prescriptionId}
+          onClose={() => setShowPrintPreview(false)}
+        />
+      )}
       {isStaffUser ? (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center p-8 bg-red-50 rounded-lg border border-red-200 max-w-2xl">
@@ -1184,8 +1194,7 @@ const PrescriptionPage = () => {
                     value={formData.age}
                     onChange={handleChange}
                     className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    required
-                    placeholder="Years"
+                    placeholder="Years (optional)"
                   />
                 </div>
 

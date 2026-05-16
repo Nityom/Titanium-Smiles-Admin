@@ -64,9 +64,11 @@ export default function LoginForm() {
     setSuccessMessage("");
     try {
       const result = await resendLoginOtp(email, password);
-      setOtpSessionId(result.otpSessionId);
-      setOtpDeliveryEmail(result.deliveryEmail);
-      setOtpExpiresAt(result.expiresAt);
+      if (!result.directLogin) {
+        setOtpSessionId(result.otpSessionId);
+        setOtpDeliveryEmail(result.deliveryEmail);
+        setOtpExpiresAt(result.expiresAt);
+      }
       setOtp("");
       setSuccessMessage("A new 4-digit OTP has been sent.");
     } catch (err: unknown) {
@@ -84,6 +86,11 @@ export default function LoginForm() {
     try {
       if (!isOtpStep) {
         const result = await signInWithEmail(email, password);
+        if (result.directLogin) {
+          // Trusted device: session was already created, redirect straight to dashboard
+          router.push("/admin/patients");
+          return;
+        }
         setOtpSessionId(result.otpSessionId);
         setOtpDeliveryEmail(result.deliveryEmail);
         setOtpExpiresAt(result.expiresAt);

@@ -3,7 +3,9 @@ import { convex, convexAuthFns, hashValue } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
 
-const SESSION_COOKIE_NAME = "ksd_auth_session";
+const SESSION_COOKIE_NAME = "tsd_auth_session";
+// Device trust cookie is intentionally NOT cleared on logout;
+// it allows the admin to re-login without OTP within the 12-hour window.
 
 export async function POST(request: NextRequest) {
   try {

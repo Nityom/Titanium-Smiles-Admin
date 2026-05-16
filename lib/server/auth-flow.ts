@@ -217,7 +217,7 @@ export async function issueLoginOtp(user: AuthUser) {
 
 export async function createAndStoreSession(userId: string) {
   const rawSessionToken = createRandomToken();
-  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const expiresAt = Date.now() + 12 * 60 * 60 * 1000; // 12 hours
 
   await convex.mutation(convexAuthFns.createAuthSession, {
     userId: userId as any,

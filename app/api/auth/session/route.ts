@@ -3,7 +3,7 @@ import { convex, convexAuthFns, hashValue } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
 
-const SESSION_COOKIE_NAME = "ksd_auth_session";
+const SESSION_COOKIE_NAME = "tsd_auth_session";
 
 export async function GET(request: NextRequest) {
   try {

@@ -31,7 +31,7 @@ interface PrescriptionData {
   id: string;
   patient_name: string;
   phone_number: string;
-  age: string;
+  age?: string;
   sex: string;
   reference_number?: string;
   prescription_date: string;
@@ -64,6 +64,14 @@ function parseArrayField<T>(value: unknown): T[] {
 function PrintPrescriptionContent() {
   const searchParams = useSearchParams();
   const prescriptionId = searchParams.get('prescriptionId');
+  const noAutoprint = searchParams.get('noAutoprint') === '1';
+  const sectionsParam = searchParams.get('sections');
+  // If no sections param provided, show all; otherwise only show selected keys
+  const activeSections: Set<string> | null = sectionsParam
+    ? new Set(sectionsParam.split(','))
+    : null;
+  const show = (key: string) => activeSections === null || activeSections.has(key);
+
   const [prescriptionData, setPrescriptionData] = useState<PrescriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,14 +115,14 @@ function PrintPrescriptionContent() {
     fetchPrescriptionData();
   }, [prescriptionId]);
 
-  // Auto-print when data is loaded
+  // Auto-print when data is loaded (skip when embedded in print preview iframe)
   useEffect(() => {
-    if (!loading && prescriptionData) {
+    if (!loading && prescriptionData && !noAutoprint) {
       setTimeout(() => {
         window.print();
       }, 500);
     }
-  }, [loading, prescriptionData]);
+  }, [loading, prescriptionData, noAutoprint]);
 
   if (loading) {
     return (
@@ -311,7 +319,7 @@ function PrintPrescriptionContent() {
             <div className="col"><span className="lbl">Registration No.</span><span className="val">{prescriptionData.reference_number || '—'}</span></div>
           </div>
           <div className="row">
-            <div className="col"><span className="lbl">Age</span><span className="val">{prescriptionData.age}</span></div>
+            <div className="col">{prescriptionData.age ? <><span className="lbl">Age</span><span className="val">{prescriptionData.age}</span></> : null}</div>
             <div className="col"><span className="lbl">Date</span><span className="val">{formatDate(prescriptionData.prescription_date)}</span></div>
           </div>
           <div className="row">
@@ -327,7 +335,7 @@ function PrintPrescriptionContent() {
         </div>
 
         {/* ── CHIEF COMPLAINT ── */}
-        {prescriptionData.chief_complaint && (
+        {show('chief_complaint') && prescriptionData.chief_complaint && (
           <>
             <p className="sec-heading">CHIEF COMPLAINT</p>
             <p className="sec-body">{prescriptionData.chief_complaint}</p>
@@ -335,7 +343,7 @@ function PrintPrescriptionContent() {
         )}
 
         {/* ── MEDICAL HISTORY ── */}
-        {prescriptionData.medical_history && (
+        {show('medical_history') && prescriptionData.medical_history && (
           <>
             <p className="sec-heading">MEDICAL HISTORY</p>
             <p className="sec-body">{prescriptionData.medical_history}</p>
@@ -343,7 +351,7 @@ function PrintPrescriptionContent() {
         )}
 
         {/* ── INVESTIGATION ── */}
-        {prescriptionData.investigation && (
+        {show('investigation') && prescriptionData.investigation && (
           <>
             <p className="sec-heading">INVESTIGATION</p>
             <p className="sec-body">{prescriptionData.investigation}</p>
@@ -351,7 +359,7 @@ function PrintPrescriptionContent() {
         )}
 
         {/* ── ORAL EXAMINATION ── */}
-        {(prescriptionData.oral_exam_notes || (prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0)) && (
+        {show('oral_exam') && (prescriptionData.oral_exam_notes || (prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0)) && (
           <>
             <p className="sec-heading">ORAL EXAMINATION</p>
             {prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0 && (
@@ -370,7 +378,7 @@ function PrintPrescriptionContent() {
         )}
 
         {/* ── DIAGNOSIS ── */}
-        {prescriptionData.diagnosis && (
+        {show('diagnosis') && prescriptionData.diagnosis && (
           <>
             <p className="sec-heading">DIAGNOSIS</p>
             <p className="sec-body">{prescriptionData.diagnosis}</p>
@@ -378,7 +386,7 @@ function PrintPrescriptionContent() {
         )}
 
         {/* ── TREATMENT PLAN ── */}
-        {prescriptionData.treatment_plan && prescriptionData.treatment_plan.length > 0 && (
+        {show('treatment_plan') && prescriptionData.treatment_plan && prescriptionData.treatment_plan.length > 0 && (
           <>
             <p className="sec-heading">TREATMENT PLAN</p>
             <div className="sec-body">
@@ -390,7 +398,7 @@ function PrintPrescriptionContent() {
         )}
 
         {/* ── TREATMENT DONE ── */}
-        {prescriptionData.treatment_done && prescriptionData.treatment_done.length > 0 && (
+        {show('treatment_done') && prescriptionData.treatment_done && prescriptionData.treatment_done.length > 0 && (
           <>
             <p className="sec-heading">TREATMENT DONE</p>
             <div className="sec-body">
@@ -402,7 +410,7 @@ function PrintPrescriptionContent() {
         )}
 
         {/* ── ADVICE / INSTRUCTIONS ── */}
-        {prescriptionData.advice && (
+        {show('advice') && prescriptionData.advice && (
           <>
             <p className="sec-heading">ADVICE / INSTRUCTIONS</p>
             <p className="sec-body">{prescriptionData.advice}</p>
@@ -410,7 +418,7 @@ function PrintPrescriptionContent() {
         )}
 
         {/* ── MEDICATIONS ── */}
-        {prescriptionData.medicines && prescriptionData.medicines.length > 0 && (
+        {show('medications') && prescriptionData.medicines && prescriptionData.medicines.length > 0 && (
           <>
             <p className="sec-heading">MEDICATIONS</p>
             <table className="med-table">

@@ -750,7 +750,7 @@ function safeFormatDate(dateValue: string | null | undefined, fallback?: string)
 
 function normalizeReferenceNumber(referenceNumber?: string): string {
   if (!referenceNumber) return '';
-  return referenceNumber.replace(/^TS/, 'KS');
+  return referenceNumber;
 }
 
 // Format currency with proper spacing
