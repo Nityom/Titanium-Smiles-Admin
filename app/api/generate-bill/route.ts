@@ -299,7 +299,7 @@ function generatePDF(doc: jsPDF, billData: BillData): void {
   doc.setFontSize(8);
   centerText('E3/119, First Floor Arera Colony, Main Road No. 3 Near Gastrocare Hospital Bhopal, Madhya Pradesh - 462016', yPos, 8);
   yPos += 4;
-  centerText('Bihar, India - 842001', yPos, 8);
+  centerText('Bhopal, India - 842001', yPos, 8);
   yPos += 4;
   centerText('Phone: +91 9917609177\n | Email:  titaniumsmiles.in@gmail.com', yPos, 8);
   yPos += 8;
