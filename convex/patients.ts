@@ -117,3 +117,43 @@ export const remove = mutation({
         await ctx.db.delete(args.id);
     },
 });
+
+// One-time migration: rename all KS-prefixed reference numbers to TS
+export const migrateKsToTs = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const patients = await ctx.db.query("patients").collect();
+        let updated = 0;
+
+        for (const patient of patients) {
+            if (!patient.reference_number.startsWith("KS")) continue;
+
+            const newRef = "TS" + patient.reference_number.slice(2);
+
+            // Update patient
+            await ctx.db.patch(patient._id, { reference_number: newRef });
+
+            // Update all prescriptions with this reference number
+            const prescriptions = await ctx.db
+                .query("prescriptions")
+                .collect();
+            for (const rx of prescriptions) {
+                if (rx.reference_number === patient.reference_number) {
+                    await ctx.db.patch(rx._id, { reference_number: newRef });
+                }
+            }
+
+            // Update all bills with this reference number
+            const allBills = await ctx.db.query("bills").collect();
+            for (const bill of allBills) {
+                if (bill.reference_number === patient.reference_number) {
+                    await ctx.db.patch(bill._id, { reference_number: newRef });
+                }
+            }
+
+            updated++;
+        }
+
+        return { updated };
+    },
+});
