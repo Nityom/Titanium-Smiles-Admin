@@ -156,223 +156,179 @@ function PrintPrescriptionContent() {
     <>
       <style jsx global>{`
         @media print {
-          @page {
-            size: A4 portrait;
-            margin-top: 5cm;
-            margin-bottom: 4cm;
-            margin-left: 1.8cm;
-            margin-right: 1.8cm;
-          }
-
-          body {
-            margin: 0;
-            padding: 0;
-            background: white;
-            color: black;
-          }
-
-          * {
-            background: transparent !important;
-            color: black !important;
-            box-shadow: none !important;
-            text-shadow: none !important;
-          }
-
-          button, .no-print {
-            display: none !important;
-          }
-
-          .print-content {
+          body * { visibility: hidden; }
+          .rx-container, .rx-container * { visibility: visible; }
+          .rx-container {
+            position: absolute;
+            left: 0; top: 0;
             width: 100%;
-            margin: 0;
-            padding: 0;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
           }
+          .no-print { display: none !important; }
         }
 
-        @media screen {
-          body {
-            background: #d1d5db;
-          }
-
-          .print-content {
-            max-width: 21cm;
-            margin: 1.5cm auto;
-            padding: 5cm 1.8cm 3.5cm 1.8cm;
-            background: white;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.15);
-            min-height: 29.7cm;
-          }
+        @page {
+          size: A4;
+          margin: 15mm;
         }
 
-        .print-content {
-          font-family: "Times New Roman", Times, Georgia, serif;
-          font-size: 10.5pt;
-          line-height: 1.45;
-          color: #000;
+        .rx-preview {
+          background: white;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+          margin: 20px auto;
+          max-width: 210mm;
+          padding: 20mm;
         }
 
-        /* ── Patient Info Grid ── */
-        .patient-grid {
-          width: 100%;
-          font-size: 10pt;
-          margin-bottom: 8px;
-          border-top: 1.5px solid #000;
-          border-bottom: 1.5px solid #000;
-          padding: 4px 0;
+        .rx-container {
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: 13px;
+          color: #111;
         }
 
-        .patient-grid .row {
-          display: flex;
-          line-height: 1.45;
+        .rx-sec-heading {
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          margin: 10px 0 3px 0;
+          color: #374151;
         }
 
-        .patient-grid .col {
-          display: flex;
-          width: 50%;
-        }
-
-        .patient-grid .lbl {
-          font-weight: bold;
-          min-width: 130px;
-          padding-left: 4px;
-        }
-
-        .patient-grid .val {
-          flex: 1;
-        }
-
-        /* ── Section Heading ── */
-        .sec-heading {
-          font-size: 10.5pt;
-          font-weight: bold;
-          text-decoration: underline;
-          margin: 7px 0 2px 0;
-          padding: 0;
-        }
-
-        /* ── Section Body ── */
-        .sec-body {
-          font-size: 10pt;
-          line-height: 1.35;
-          margin: 0 0 1px 14px;
+        .rx-sec-body {
+          font-size: 12px;
+          line-height: 1.5;
+          margin: 0 0 2px 12px;
           white-space: pre-wrap;
-          text-align: justify;
+          color: #111;
         }
 
-        /* ── Medication Table ── */
-        .med-table {
+        .rx-med-table {
           border-collapse: collapse;
           width: 100%;
-          font-size: 10pt;
-          margin: 4px 0 2px 0;
+          font-size: 12px;
+          margin: 4px 0 6px 0;
         }
-
-        .med-table th {
-          font-weight: bold;
-          border: 1px solid #000;
-          padding: 3px 8px;
+        .rx-med-table th {
+          font-weight: 700;
+          border-top: 2px solid #1f2937;
+          border-bottom: 2px solid #1f2937;
+          padding: 5px 8px;
           text-align: left;
         }
-
-        .med-table td {
-          border: 1px solid #000;
-          padding: 3px 8px;
-          text-align: left;
+        .rx-med-table td {
+          border-bottom: 1px solid #d1d5db;
+          padding: 5px 8px;
           vertical-align: top;
-        }
-
-        /* ── Signature Row ── */
-        .sig-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          margin-top: 20px;
-          font-size: 10pt;
-        }
-
-        .sig-block {
-          text-align: center;
-          min-width: 160px;
-        }
-
-        .sig-line {
-          display: inline-block;
-          margin-bottom: 2px;
-        }
-
-        .sig-label {
-          font-weight: bold;
-        }
-
-        .sig-title {
-          font-size: 9.5pt;
-          margin-top: 1px;
         }
       `}</style>
 
-      <div className="print-content">
+      <div className="rx-container rx-preview">
 
-        {/* ── Patient Information (top/bottom border only) ── */}
-        <div className="patient-grid">
-          <div className="row">
-            <div className="col"><span className="lbl">Patient Name</span><span className="val">{prescriptionData.patient_name}</span></div>
-            <div className="col"><span className="lbl">Registration No.</span><span className="val">{prescriptionData.reference_number || '—'}</span></div>
-          </div>
-          <div className="row">
-            <div className="col">{prescriptionData.age ? <><span className="lbl">Age</span><span className="val">{prescriptionData.age}</span></> : null}</div>
-            <div className="col"><span className="lbl">Date</span><span className="val">{formatDate(prescriptionData.prescription_date)}</span></div>
-          </div>
-          <div className="row">
-            <div className="col"><span className="lbl">Sex</span><span className="val">{prescriptionData.sex}</span></div>
-            <div className="col"><span className="lbl">Contact No.</span><span className="val">{prescriptionData.phone_number}</span></div>
-          </div>
-          {prescriptionData.followup_date && (
-            <div className="row">
-              <div className="col"><span className="lbl">Visit Type</span><span className="val">Consultation</span></div>
-              <div className="col"><span className="lbl">Follow-up Date</span><span className="val">{formatDate(prescriptionData.followup_date)}</span></div>
+        {/* ── HEADER (matching Bill UI) ── */}
+        <div className="pb-4 mb-4">
+          <div className="flex justify-between items-start">
+            <div className="text-left">
+              <div className="text-xs text-gray-600 mb-2">PRESCRIPTION</div>
             </div>
-          )}
+          </div>
+
+          <div className="mt-6 text-center">
+            <div className="flex items-center justify-center mb-3">
+              <img
+                src="/dental_logo.svg"
+                alt="Titanium Smiles Logo"
+                className="h-16 w-16 mr-3"
+              />
+              <h1 className="text-4xl font-bold text-gray-600">
+                Titanium Smiles
+              </h1>
+            </div>
+            <p className="text-xs text-gray-700">
+              E3/119, First Floor, Arera Colony, Main Road No. 3,
+              Near Gastrocare Hospital, Bhopal, Madhya Pradesh - 462016
+            </p>
+            <p className="text-xs text-gray-700 mt-1">Mobile: 7771970889</p>
+          </div>
+          <div className="mt-4 border-t border-gray-200"></div>
         </div>
+
+        {/* ── Prescription No. & Date ── */}
+        <div className="pb-3 mb-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <span className="text-sm font-semibold">Prescription Date: </span>
+              <span className="text-sm">{formatDate(prescriptionData.prescription_date)}</span>
+            </div>
+            {prescriptionData.reference_number && (
+              <div>
+                <span className="text-sm font-semibold">Patient Ref.: </span>
+                <span className="text-sm">{prescriptionData.reference_number}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Patient Info (matching BILL TO style) ── */}
+        <div className="mb-4">
+          <div className="text-sm font-semibold mb-1">PATIENT DETAILS</div>
+          <div className="text-sm">
+            <div className="font-semibold">{prescriptionData.patient_name}</div>
+            <div className="text-gray-600">Mobile: {prescriptionData.phone_number}</div>
+            {(prescriptionData.age || prescriptionData.sex) && (
+              <div className="text-gray-600">
+                {prescriptionData.age && `Age: ${prescriptionData.age}`}
+                {prescriptionData.age && prescriptionData.sex && ' | '}
+                {prescriptionData.sex && `Gender: ${prescriptionData.sex}`}
+              </div>
+            )}
+            {prescriptionData.followup_date && (
+              <div className="text-gray-600">Follow-up Date: {formatDate(prescriptionData.followup_date)}</div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Divider ── */}
+        <div className="border-t-2 border-gray-800 mb-4"></div>
 
         {/* ── CHIEF COMPLAINT ── */}
         {show('chief_complaint') && prescriptionData.chief_complaint && (
           <>
-            <p className="sec-heading">CHIEF COMPLAINT</p>
-            <p className="sec-body">{prescriptionData.chief_complaint}</p>
+            <p className="rx-sec-heading">Chief Complaint</p>
+            <p className="rx-sec-body">{prescriptionData.chief_complaint}</p>
           </>
         )}
 
         {/* ── MEDICAL HISTORY ── */}
         {show('medical_history') && prescriptionData.medical_history && (
           <>
-            <p className="sec-heading">MEDICAL HISTORY</p>
-            <p className="sec-body">{prescriptionData.medical_history}</p>
+            <p className="rx-sec-heading">Medical History</p>
+            <p className="rx-sec-body">{prescriptionData.medical_history}</p>
           </>
         )}
 
         {/* ── INVESTIGATION ── */}
         {show('investigation') && prescriptionData.investigation && (
           <>
-            <p className="sec-heading">INVESTIGATION</p>
-            <p className="sec-body">{prescriptionData.investigation}</p>
+            <p className="rx-sec-heading">Investigation</p>
+            <p className="rx-sec-body">{prescriptionData.investigation}</p>
           </>
         )}
 
         {/* ── ORAL EXAMINATION ── */}
         {show('oral_exam') && (prescriptionData.oral_exam_notes || (prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0)) && (
           <>
-            <p className="sec-heading">ORAL EXAMINATION</p>
+            <p className="rx-sec-heading">Oral Examination</p>
             {prescriptionData.selected_teeth && prescriptionData.selected_teeth.length > 0 && (
-              <div className="sec-body">
+              <div className="rx-sec-body">
                 {prescriptionData.selected_teeth.map((tooth, index) => (
-                  <div key={index}>
-                    Tooth #{tooth.id} ({tooth.type}) – {tooth.disease}
-                  </div>
+                  <div key={index}>Tooth #{tooth.id} ({tooth.type}) &ndash; {tooth.disease}</div>
                 ))}
               </div>
             )}
             {prescriptionData.oral_exam_notes && (
-              <p className="sec-body">{prescriptionData.oral_exam_notes}</p>
+              <p className="rx-sec-body">{prescriptionData.oral_exam_notes}</p>
             )}
           </>
         )}
@@ -380,16 +336,16 @@ function PrintPrescriptionContent() {
         {/* ── DIAGNOSIS ── */}
         {show('diagnosis') && prescriptionData.diagnosis && (
           <>
-            <p className="sec-heading">DIAGNOSIS</p>
-            <p className="sec-body">{prescriptionData.diagnosis}</p>
+            <p className="rx-sec-heading">Diagnosis</p>
+            <p className="rx-sec-body">{prescriptionData.diagnosis}</p>
           </>
         )}
 
         {/* ── TREATMENT PLAN ── */}
         {show('treatment_plan') && prescriptionData.treatment_plan && prescriptionData.treatment_plan.length > 0 && (
           <>
-            <p className="sec-heading">TREATMENT PLAN</p>
-            <div className="sec-body">
+            <p className="rx-sec-heading">Treatment Plan</p>
+            <div className="rx-sec-body">
               {prescriptionData.treatment_plan.map((step, index) => (
                 <div key={index}>{index + 1}. {step}</div>
               ))}
@@ -400,8 +356,8 @@ function PrintPrescriptionContent() {
         {/* ── TREATMENT DONE ── */}
         {show('treatment_done') && prescriptionData.treatment_done && prescriptionData.treatment_done.length > 0 && (
           <>
-            <p className="sec-heading">TREATMENT DONE</p>
-            <div className="sec-body">
+            <p className="rx-sec-heading">Treatment Done</p>
+            <div className="rx-sec-body">
               {prescriptionData.treatment_done.map((item, index) => (
                 <div key={index}>{index + 1}. {item.description}</div>
               ))}
@@ -409,22 +365,14 @@ function PrintPrescriptionContent() {
           </>
         )}
 
-        {/* ── ADVICE / INSTRUCTIONS ── */}
-        {show('advice') && prescriptionData.advice && (
-          <>
-            <p className="sec-heading">ADVICE / INSTRUCTIONS</p>
-            <p className="sec-body">{prescriptionData.advice}</p>
-          </>
-        )}
-
-        {/* ── MEDICATIONS ── */}
+        {/* ── MEDICATIONS (matching bill items table style) ── */}
         {show('medications') && prescriptionData.medicines && prescriptionData.medicines.length > 0 && (
-          <>
-            <p className="sec-heading">MEDICATIONS</p>
-            <table className="med-table">
+          <div className="mb-6 mt-2">
+            <p className="rx-sec-heading" style={{ marginBottom: '6px' }}>Medications</p>
+            <table className="rx-med-table">
               <thead>
                 <tr>
-                  <th style={{ width: '6%', textAlign: 'center' }}>S.No</th>
+                  <th style={{ width: '6%', textAlign: 'center' }}>#</th>
                   <th style={{ width: '44%' }}>Medication</th>
                   <th style={{ width: '25%' }}>Dosage</th>
                   <th style={{ width: '25%' }}>Duration</th>
@@ -441,59 +389,51 @@ function PrintPrescriptionContent() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* ── ADVICE ── */}
+        {show('advice') && prescriptionData.advice && (
+          <>
+            <p className="rx-sec-heading">Advice / Instructions</p>
+            <p className="rx-sec-body">{prescriptionData.advice}</p>
           </>
         )}
 
-        {/* ── Signature Area (two-column like hospital docs) ── */}
-        <div className="sig-row">
-          <div className="sig-block" style={{ textAlign: 'left' }}>
-            <div className="sig-line">&nbsp;</div>
-          </div>
-          <div className="sig-block" style={{ textAlign: 'center' }}>
-            <Image
-              src="/sign.png"
-              alt="Doctor's Signature"
-              width={120}
-              height={60}
-              style={{ objectFit: 'contain', marginBottom: '4px' }}
-            />
-            <div className="sig-label">Doctor&apos;s Signature</div>
-            <div className="sig-title">Consultant</div>
+        {/* ── Signature (matching bill signature) ── */}
+        <div className="mt-12 pt-8">
+          <div className="flex justify-end">
+            <div className="text-center">
+              <div className="mb-4 h-20 flex items-center justify-center">
+                <Image
+                  src="/sign.png"
+                  alt="Doctor's Signature"
+                  width={120}
+                  height={80}
+                  style={{ objectFit: 'contain' }}
+                />
+              </div>
+              <div className="border-t border-gray-800 pt-2 text-sm font-semibold">
+                <div>DOCTOR&apos;S SIGNATURE</div>
+                <div className="text-gray-500">Titanium Smiles</div>
+              </div>
+            </div>
           </div>
         </div>
 
       </div>
 
       {/* Print / Close buttons (screen only) */}
-      <div className="no-print" style={{ textAlign: 'center', padding: '20px' }}>
+      <div className="no-print flex justify-center gap-3 mt-6 mb-4">
         <button
           onClick={() => window.print()}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#2563eb',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            marginRight: '10px'
-          }}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-colors"
         >
           Print Prescription
         </button>
         <button
           onClick={() => window.close()}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#6b7280',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer'
-          }}
+          className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-colors"
         >
           Close
         </button>
