@@ -82,9 +82,9 @@ export default function InstallmentsPage() {
   return (
     <div className="w-full min-h-screen px-6 pt-6 pb-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Payment Installments</h1>
-        <p className="text-gray-600">
+      <div className="mb-6 border-b pb-4">
+        <h1 className="text-3xl font-bold text-blue-700 mb-2 text-center">Payment Installments</h1>
+        <p className="text-gray-600 text-center">
           Track all pending payments and installments for ongoing treatments
         </p>
       </div>
@@ -110,45 +110,29 @@ export default function InstallmentsPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Pending Bills</CardDescription>
-            <CardTitle className="text-3xl text-orange-600">{pendingBills.length}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">Total bills with balance</p>
-          </CardContent>
-        </Card>
+        <div className="bg-orange-50 p-6 rounded-lg border border-orange-100 shadow-sm">
+          <h4 className="text-lg font-semibold text-orange-800 mb-1">Pending Bills</h4>
+          <p className="text-3xl font-bold text-orange-600">{pendingBills.length}</p>
+          <p className="text-xs text-orange-500 mt-2">Total bills with balance</p>
+        </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Amount</CardDescription>
-            <CardTitle className="text-3xl text-blue-600">₹{totalAmount.toLocaleString()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">Sum of all pending bills</p>
-          </CardContent>
-        </Card>
+        <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 shadow-sm">
+          <h4 className="text-lg font-semibold text-blue-800 mb-1">Total Amount</h4>
+          <p className="text-3xl font-bold text-blue-600">₹{totalAmount.toLocaleString()}</p>
+          <p className="text-xs text-blue-500 mt-2">Sum of all pending bills</p>
+        </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Collected</CardDescription>
-            <CardTitle className="text-3xl text-green-600">₹{totalCollected.toLocaleString()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">Payments received so far</p>
-          </CardContent>
-        </Card>
+        <div className="bg-green-50 p-6 rounded-lg border border-green-100 shadow-sm">
+          <h4 className="text-lg font-semibold text-green-800 mb-1">Total Collected</h4>
+          <p className="text-3xl font-bold text-green-600">₹{totalCollected.toLocaleString()}</p>
+          <p className="text-xs text-green-500 mt-2">Payments received so far</p>
+        </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Pending</CardDescription>
-            <CardTitle className="text-3xl text-red-600">₹{totalPending.toLocaleString()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">Outstanding balance</p>
-          </CardContent>
-        </Card>
+        <div className="bg-red-50 p-6 rounded-lg border border-red-100 shadow-sm">
+          <h4 className="text-lg font-semibold text-red-800 mb-1">Total Pending</h4>
+          <p className="text-3xl font-bold text-red-600">₹{totalPending.toLocaleString()}</p>
+          <p className="text-xs text-red-500 mt-2">Outstanding balance</p>
+        </div>
       </div>
 
       {/* Error Message */}

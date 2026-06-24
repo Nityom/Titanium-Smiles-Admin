@@ -26,6 +26,7 @@ interface PrintableBillProps {
   total: number;
   amountPaid?: number;
   balance?: number;
+  payments?: { date: string; amount: number; method?: string }[];
   termsAndConditions?: string;
   showPrintButton?: boolean;
 }
@@ -43,6 +44,7 @@ const PrintableBill: React.FC<PrintableBillProps> = ({
   total,
   amountPaid = 0,
   balance = 0,
+  payments = [],
   termsAndConditions = 'All disputes are subject to Bhopal jurisdiction only',
   showPrintButton = true,
 }) => {
@@ -290,10 +292,26 @@ Bhopal, Madhya Pradesh - 462016
                 <span className="text-sm font-bold">{formatCurrency(total)}</span>
               </div>
 
-              <div className="flex justify-between mb-2">
-                <span className="text-sm">Received Amount</span>
-                <span className="text-sm">{formatCurrency(amountPaid)}</span>
-              </div>
+              {payments && payments.length > 0 ? (
+                <>
+                  <div className="text-sm font-semibold mb-1 mt-2">Payments Received</div>
+                  {payments.map((p, idx) => (
+                    <div key={idx} className="flex justify-between mb-1">
+                      <span className="text-xs text-gray-600">{p.date} {p.method ? `(${p.method})` : ''}</span>
+                      <span className="text-sm">{formatCurrency(p.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between mb-2 border-t border-gray-300 pt-1 mt-1">
+                    <span className="text-sm">Total Received</span>
+                    <span className="text-sm">{formatCurrency(amountPaid)}</span>
+                  </div>
+                </>
+              ) : amountPaid > 0 ? (
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm">Received Amount</span>
+                  <span className="text-sm">{formatCurrency(amountPaid)}</span>
+                </div>
+              ) : null}
 
               <div className="flex justify-between border-t-2 border-gray-800 pt-2">
                 <span className="text-sm font-bold">Balance</span>

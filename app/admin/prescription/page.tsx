@@ -193,6 +193,11 @@ const PrescriptionPage = () => {
   const [newTreatmentPrice, setNewTreatmentPrice] = useState<string>('');
   const [showAddTreatmentForm, setShowAddTreatmentForm] = useState<boolean>(false);
 
+  const [includeConsultation, setIncludeConsultation] = useState<boolean>(true);
+  const [consultationFee, setConsultationFee] = useState<number>(300);
+  const [consultationDiscount, setConsultationDiscount] = useState<number>(0);
+  const [consultationDiscountType, setConsultationDiscountType] = useState<'percent' | 'rupees'>('rupees');
+
   const [medicineOptions, setMedicineOptions] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
@@ -543,6 +548,33 @@ const PrescriptionPage = () => {
         if (prescription.oral_exam_notes) {
           setOralExamNotes(prescription.oral_exam_notes);
         }
+
+        // Try to load bill data to populate consultation fee
+        try {
+          const existingBillData = await getBillByPrescriptionId(id);
+          const bill = Array.isArray(existingBillData) ? existingBillData[0] : existingBillData;
+          if (bill && bill.items) {
+            const consultationItem = bill.items.find((item: any) => item.item_type === 'consultation' || item.itemType === 'consultation');
+            if (consultationItem) {
+              setIncludeConsultation(true);
+              setConsultationFee(consultationItem.unit_price || consultationItem.unitPrice || 0);
+              const gross = consultationItem.unit_price || consultationItem.unitPrice || 0;
+              const totalAmount = consultationItem.total || 0;
+              const discount = gross - totalAmount;
+              if (discount > 0) {
+                setConsultationDiscountType('rupees');
+                setConsultationDiscount(discount);
+              } else {
+                setConsultationDiscountType('rupees');
+                setConsultationDiscount(0);
+              }
+            } else {
+              setIncludeConsultation(false);
+            }
+          }
+        } catch (billError) {
+          console.error('Error loading bill for consultation fee:', billError);
+        }
       }
     } catch (error) {
       console.error('Error loading prescription:', error);
@@ -790,7 +822,12 @@ const PrescriptionPage = () => {
       // Always ensure a bill exists for the prescription
       if (savedPrescription?.id && patient?.id) {
         try {
-          const consultationFee = 0; // Changed from 500 to 0 to avoid hiding charges not shown in the UI
+          const finalConsultationFeeGross = includeConsultation ? consultationFee : 0;
+          const finalConsultationFeeDiscountAmt = consultationDiscountType === 'rupees' 
+            ? Math.min(consultationDiscount, finalConsultationFeeGross)
+            : (finalConsultationFeeGross * consultationDiscount) / 100;
+          const finalConsultationFeeAmount = finalConsultationFeeGross - finalConsultationFeeDiscountAmt;
+
           // Use item.total which already has per-item discounts applied
           const treatmentSubtotal = treatmentItems.reduce((sum, item) => sum + item.total, 0);
           const treatmentDiscountAmt = 0;
@@ -816,15 +853,15 @@ const PrescriptionPage = () => {
             });
 
           const medicineTotal = medicineItems.reduce((sum, item) => sum + item.total, 0);
-          const totalAmount = consultationFee + treatmentTotal + medicineTotal;
+          const totalAmount = finalConsultationFeeAmount + treatmentTotal + medicineTotal;
 
           const billItems = [
-            ...(consultationFee > 0 ? [{
+            ...(includeConsultation ? [{
               id: 1,
               description: 'Consultation Fee',
               quantity: 1,
-              unit_price: consultationFee,
-              total: consultationFee,
+              unit_price: finalConsultationFeeGross,
+              total: finalConsultationFeeAmount,
               item_type: 'consultation' as const
             }] : []),
             ...treatmentItems.map((item, index) => ({
@@ -1665,6 +1702,55 @@ const PrescriptionPage = () => {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Consultation Charge Section */}
+            <div className="bg-orange-50 p-6 rounded-lg border border-orange-100 mb-6">
+              <h3 className="text-xl font-semibold text-orange-800 mb-4">Consultation Charge</h3>
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeConsultation}
+                    onChange={(e) => setIncludeConsultation(e.target.checked)}
+                    className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500"
+                  />
+                  <span className="font-medium text-gray-700">Include Consultation Fee</span>
+                </label>
+                
+                {includeConsultation && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-600">Fee (₹):</label>
+                      <input
+                        type="number"
+                        value={consultationFee}
+                        onChange={(e) => setConsultationFee(parseFloat(e.target.value) || 0)}
+                        className="w-24 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
+                        min="0"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-600">Discount:</label>
+                      <select
+                        value={consultationDiscountType}
+                        onChange={(e) => setConsultationDiscountType(e.target.value as 'percent' | 'rupees')}
+                        className="p-2 border border-gray-300 rounded bg-white"
+                      >
+                        <option value="percent">%</option>
+                        <option value="rupees">₹</option>
+                      </select>
+                      <input
+                        type="number"
+                        value={consultationDiscount}
+                        onChange={(e) => setConsultationDiscount(parseFloat(e.target.value) || 0)}
+                        className="w-20 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
+                        min="0"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Treatment Done Section */}

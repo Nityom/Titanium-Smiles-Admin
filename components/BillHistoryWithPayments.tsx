@@ -75,7 +75,7 @@ export function BillHistoryWithPayments({ bills, onBillUpdated }: BillHistoryWit
                     </div>
                     {bill.patient_name && (
                       <p className="text-sm font-medium text-gray-700">
-                        {bill.patient_name}
+                        Patient: {bill.patient_name}
                       </p>
                     )}
                     {bill.phone_number && (

@@ -36,6 +36,7 @@ interface BillData {
   total: number;
   amountPaid: number;
   balance: number;
+  payments?: { date: string; amount: number; method?: string }[];
 }
 
 function PrintBillContent() {
@@ -59,6 +60,17 @@ function PrintBillContent() {
         if (!bill) {
           throw new Error('Bill not found');
         }
+
+        const paymentsData = await convex.query(api.payment_transactions.listByBill, { bill_id: billId as string });
+        
+        const payments = paymentsData.map((p: any) => {
+          const date = p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-GB') : '';
+          return {
+            date,
+            amount: p.amount,
+            method: p.payment_method
+          };
+        });
 
         // Parse items — Amount column shows the net (after per-item discount).
         // A separate `discount` field per item drives the DISCOUNT column.
@@ -113,6 +125,7 @@ function PrintBillContent() {
           total,
           amountPaid,
           balance,
+          payments,
         });
       } catch (err) {
         console.error('Error fetching bill:', err);

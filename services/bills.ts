@@ -136,9 +136,23 @@ export const getPatientByReferenceNumber = async (referenceNumber: string) => {
 export const getAll = async () => {
   try {
     const data = await convex.query(api.bills.list);
-    return data.map((b: any) => ({ ...b, id: b._id })) as any as Bill[];
+    return data.map((b: any) => ({
+      ...b,
+      id: b._id,
+      created_at: b.created_at || (b._creationTime ? new Date(b._creationTime).toISOString() : undefined)
+    })) as any as Bill[];
   } catch (e) {
     console.error('Exception in getAll bills:', e);
+    throw e;
+  }
+};
+
+export const getById = async (id: string) => {
+  try {
+    const data = await convex.query(api.bills.getById, { id: id as any });
+    return data ? { ...data, id: data._id } as any as Bill : null;
+  } catch (e) {
+    console.error('Exception in getById:', e);
     throw e;
   }
 };
@@ -146,6 +160,7 @@ export const getAll = async () => {
 export const billService = {
   create: createBill,
   update: updateBill,
+  getById: getById,
   getByPrescriptionId: getBillByPrescriptionId,
   getAll: getAll,
 };

@@ -1,6 +1,8 @@
 // app/api/generate-bill/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import jsPDF from 'jspdf';
+import { paymentTransactionService, PaymentTransaction } from '@/services/payment-transactions';
+import { billService } from '@/services/bills';
 export const runtime = 'nodejs';
 
 // TypeScript declarations
@@ -45,6 +47,7 @@ interface BillData {
   };
   teeth?: string;
   diagnosis?: string;
+  payments?: PaymentTransaction[];
 }
 
 export async function POST(request: NextRequest) {
@@ -85,62 +88,24 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Fetch bill data from PHP backend
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-    const billResponse = await fetch(`${backendUrl}/bills.php?id=${billId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // Fetch bill data using billService
+    const billFromDb: any = await billService.getById(billId);
 
-    if (!billResponse.ok) {
-      throw new Error('Failed to fetch bill from backend');
+    if (!billFromDb) {
+      throw new Error('Failed to fetch bill from database');
     }
-
-    const billApiData = await billResponse.json();
-    const billFromDb = billApiData.data || billApiData;
     
-    console.log('Fetched bill from backend:', billFromDb);
+    console.log('Fetched bill from database:', billFromDb);
 
-    // Fetch patient data from PHP backend using reference number
+    // Patient data is already populated by getById in convex/bills.ts
     let patientDetails = {
       name: billFromDb.patient_name || 'Patient Name',
       age: billFromDb.patient_age?.toString() || '',
       sex: billFromDb.patient_sex || '',
       reference_number: billFromDb.reference_number || '',
-      contactDetails: billFromDb.patient_phone || '',
-      date: new Date(billFromDb.created_at || Date.now()).toLocaleDateString()
+      contactDetails: billFromDb.phone_number || '',
+      date: new Date(billFromDb._creationTime || Date.now()).toLocaleDateString()
     };
-
-    if (billFromDb.reference_number) {
-      try {
-        const patientResponse = await fetch(`${backendUrl}/patients.php?reference=${encodeURIComponent(billFromDb.reference_number)}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (patientResponse.ok) {
-          const patientApiData = await patientResponse.json();
-          const patient = patientApiData.data || patientApiData;
-          
-          if (patient) {
-            patientDetails = {
-              name: patient.name || billFromDb.patient_name || 'Patient Name',
-              age: patient.age?.toString() || '',
-              sex: patient.sex || '',
-              reference_number: billFromDb.reference_number,
-              contactDetails: patient.phone_number || '',
-              date: new Date(billFromDb.created_at || Date.now()).toLocaleDateString()
-            };
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching patient details:', err);
-      }
-    }
 
     // Parse items from the bill
     const items = Array.isArray(billFromDb.items) ? billFromDb.items.map((item: any) => ({
@@ -171,7 +136,7 @@ export async function GET(request: NextRequest) {
       },
       invoice: {
         number: billFromDb.bill_number || billId,
-        date: safeFormatDate(billFromDb.bill_date, billFromDb.created_at),
+        date: safeFormatDate(billFromDb.bill_date, billFromDb._creationTime),
         paymentMethod: billFromDb.payment_method || 'Cash',
         paymentStatus: billFromDb.payment_status || 'PENDING',
       },
@@ -188,6 +153,15 @@ export async function GET(request: NextRequest) {
       teeth: billFromDb.teeth_treated || '',
       diagnosis: billFromDb.diagnosis || billFromDb.notes || '',
     };
+
+    try {
+      const payments = await paymentTransactionService.getByBillId(billId);
+      if (payments && payments.length > 0) {
+        billData.payments = payments;
+      }
+    } catch (err) {
+      console.error('Error fetching payments:', err);
+    }
 
     console.log('Generated bill data for PDF:', billData);
 
@@ -675,6 +649,77 @@ if (billData.invoice.paymentStatus !== 'Full Payment') {
   doc.setTextColor('#000000');
 }
 
+  if (billData.payments && billData.payments.length > 0) {
+    yPos += 10;
+    doc.setTextColor(secondaryColor);
+    doc.setFontSize(12);
+    doc.text('Payment History', margin, yPos);
+    yPos += 7;
+
+    const paymentTableX = margin;
+    const paymentTableWidth = pageWidth - (2 * margin);
+    
+    const pColWidths = [
+      0.10 * paymentTableWidth, // S.No
+      0.35 * paymentTableWidth, // Date
+      0.30 * paymentTableWidth, // Method
+      0.25 * paymentTableWidth  // Amount
+    ];
+
+    const pColX = [
+      paymentTableX,
+      paymentTableX + pColWidths[0],
+      paymentTableX + pColWidths[0] + pColWidths[1],
+      paymentTableX + pColWidths[0] + pColWidths[1] + pColWidths[2],
+      paymentTableX + pColWidths[0] + pColWidths[1] + pColWidths[2] + pColWidths[3]
+    ];
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(paymentTableX, yPos, paymentTableWidth, rowHeight, 'F');
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+
+    doc.text('S.No', pColX[0] + pColWidths[0]/2, yPos + 5.5, { align: 'center' });
+    doc.text('Date', pColX[1] + pColWidths[1]/2, yPos + 5.5, { align: 'center' });
+    doc.text('Method', pColX[2] + pColWidths[2]/2, yPos + 5.5, { align: 'center' });
+    doc.text('Amount Paid', pColX[3] + pColWidths[3]/2, yPos + 5.5, { align: 'center' });
+
+    yPos += rowHeight;
+
+    doc.setFont('helvetica', 'normal');
+    const pTableTop = yPos - rowHeight;
+    
+    billData.payments.forEach((payment, index) => {
+      if (index % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(paymentTableX, yPos, paymentTableWidth, rowHeight, 'F');
+      }
+
+      doc.text((index + 1).toString(), pColX[0] + pColWidths[0]/2, yPos + 5.5, { align: 'center' });
+      doc.text(safeFormatDate(payment.payment_date), pColX[1] + pColWidths[1]/2, yPos + 5.5, { align: 'center' });
+      doc.text(payment.payment_method || 'N/A', pColX[2] + pColWidths[2]/2, yPos + 5.5, { align: 'center' });
+      doc.text(formatCurrency(payment.amount), pColX[3] + pColWidths[3] - 3, yPos + 5.5, { align: 'right' });
+
+      doc.setDrawColor(200, 200, 200);
+      doc.line(paymentTableX, yPos + rowHeight, paymentTableX + paymentTableWidth, yPos + rowHeight);
+
+      yPos += rowHeight;
+    });
+
+    const pTableBottom = yPos;
+    
+    pColX.forEach((x, i) => {
+      if (i > 0) {
+        doc.line(x, pTableTop, x, pTableBottom);
+      }
+    });
+
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.rect(paymentTableX, pTableTop, paymentTableWidth, pTableBottom - pTableTop);
+    doc.setLineWidth(0.1);
+  }
 
   yPos+=15
   // Add footer
@@ -735,7 +780,7 @@ function formatDate(dateStr: string | number): string {
 }
 
 // Helper function to safely parse and format date
-function safeFormatDate(dateValue: string | null | undefined, fallback?: string): string {
+function safeFormatDate(dateValue: string | null | undefined, fallback?: string | number): string {
   if (!dateValue) {
     return formatDate(fallback || new Date().toISOString());
   }

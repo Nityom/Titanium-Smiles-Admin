@@ -515,6 +515,19 @@ const ViewPatients = () => {
 
                 {/* Modal Body */}
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="flex justify-end mb-4">
+                    <Link href={`/admin/prescription?patientName=${encodeURIComponent(selectedPatient.name)}&age=${selectedPatient.age}&sex=${selectedPatient.sex}&phone=${encodeURIComponent(selectedPatient.phone_number)}&medicalHistory=${encodeURIComponent(selectedPatient.prescriptions[0]?.medical_history || '')}`}>
+                      <button
+                        title="Create New Prescription"
+                        className="flex items-center justify-center text-white bg-green-600 hover:bg-green-700 rounded-lg px-4 py-2 focus:outline-none transition-colors shadow-sm"
+                      >
+                        <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="font-medium">New Prescription</span>
+                      </button>
+                    </Link>
+                  </div>
                   <div className="mb-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="bg-blue-50 p-4 rounded-lg">
